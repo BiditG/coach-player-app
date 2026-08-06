@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  quality:
+    name: Quality Gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - run: npm ci
+
+      # Gate 1: Type check + Lint
+      - name: TypeScript check
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      # Gate 2: Unit + Integration tests with coverage
+      - name: Tests
+        run: npm run test:coverage
+
+      # Gate 2b: Upload coverage to Codecov (optional — needs CODECOV_TOKEN)
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/lcov.info
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      # Gate 2c: Quality scan (jscpd + knip)
+      - name: Quality scan
+        run: npm run quality:scan
+
+      # Gate 2d: Architecture fitness
+      - name: Architecture tests
+        run: npm run test:arch
+
+      # Gate 3: Production build compiles (with placeholder env — no live DB needed)
+      - name: Build
+        run: npm run build
+        env:
+          POSTGRES_URL: postgresql://user:pass@localhost:5432/db
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key
+          STRIPE_SECRET_KEY: sk_test_placeholder
+          STRIPE_WEBHOOK_SECRET: whsec_placeholder
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_placeholder
+          BASE_URL: http://localhost:3000
+
+# Note: E2E tests (`npm run test:e2e`, Playwright) are run locally, not in CI —
+# they require a running app instance plus real Supabase/Stripe credentials,
+# which aren't available to a public CI runner. See README for local usage.
