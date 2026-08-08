@@ -42,7 +42,7 @@ test.describe('Navigation', () => {
 test.describe('Auth guard', () => {
   test('dashboard redirects unauthenticated users', async ({ page }) => {
     await page.goto('/dashboard');
-    // Should redirect to login
     await page.waitForURL(/\/(login|signin)/);
+    await expect(page).toHaveURL(/\/(login|signin)/);
   });
 });

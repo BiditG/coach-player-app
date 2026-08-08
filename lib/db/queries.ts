@@ -1,6 +1,6 @@
 import { desc, and, eq, isNull } from 'drizzle-orm';
 import { db } from './drizzle';
-import { activityLogs, teamMembers, teams, users } from './schema';
+import { activityLogs, invitations, teamMembers, teams, users } from './schema';
 import { createClient } from '@/lib/supabase/server';
 
 export async function getUser() {
@@ -100,6 +100,55 @@ export async function getActivityLogs() {
     .where(eq(activityLogs.userId, user.id))
     .orderBy(desc(activityLogs.timestamp))
     .limit(10);
+}
+
+export async function updateUserName(userId: string, name: string) {
+  await db
+    .update(users)
+    .set({ name, updatedAt: new Date() })
+    .where(eq(users.id, userId));
+}
+
+// Soft-delete: keeps the row (for activity_logs FK / audit trail) but frees
+// up the email so a new signup can reuse it, and stops getUser() (which
+// filters on isNull(deletedAt)) from returning this account.
+export async function softDeleteUser(userId: string, anonymizedEmail: string) {
+  await db
+    .update(users)
+    .set({
+      deletedAt: new Date(),
+      email: anonymizedEmail,
+    })
+    .where(eq(users.id, userId));
+}
+
+export async function deleteTeamMember(memberId: number, teamId: number) {
+  await db
+    .delete(teamMembers)
+    .where(and(eq(teamMembers.id, memberId), eq(teamMembers.teamId, teamId)));
+}
+
+export async function findTeamMemberByEmail(email: string, teamId: number) {
+  return db
+    .select({ id: users.id })
+    .from(users)
+    .innerJoin(teamMembers, eq(users.id, teamMembers.userId))
+    .where(and(eq(users.email, email), eq(teamMembers.teamId, teamId)))
+    .limit(1);
+}
+
+export async function findPendingInvitation(email: string, teamId: number) {
+  return db
+    .select()
+    .from(invitations)
+    .where(
+      and(
+        eq(invitations.email, email),
+        eq(invitations.teamId, teamId),
+        eq(invitations.status, 'pending')
+      )
+    )
+    .limit(1);
 }
 
 export async function getTeamForUser() {

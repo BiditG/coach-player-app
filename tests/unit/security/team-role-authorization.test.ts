@@ -35,10 +35,18 @@ function extractFn(source: string, name: string): string {
 // Heuristic: the body must compare a role value against 'owner' (or reject
 // non-owners) before it mutates. We look for a literal 'owner'/"owner" used in a
 // guard, not merely in an enum of allowed invite roles.
+// Split into independent, bounded patterns instead of one alternation with an
+// unbounded `.*role` branch (flagged by sonarjs as super-linear / overly
+// complex) and a redundant trailing branch — same detection intent.
+const OWNER_GUARD_PATTERNS = [
+  /role\s*[!=]==?\s*['"]owner['"]/, // role !== 'owner' / role === 'owner'
+  /['"]owner['"]\s*[!=]==?\s*role/, // 'owner' !== role (reversed order)
+  /\bisOwner\b/,
+  /\brequireOwner\b/,
+];
+
 function hasOwnerAuthorizationGuard(body: string): boolean {
-  return /role\s*[!=]==?\s*['"]owner['"]|['"]owner['"]\s*[!=]==?\s*.*role|isOwner|requireOwner|role\s*!==\s*['"]owner['"]/.test(
-    body
-  );
+  return OWNER_GUARD_PATTERNS.some((pattern) => pattern.test(body));
 }
 
 describe('SECURITY: owner-role authorization on mutating team actions', () => {

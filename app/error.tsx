@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 
-export default function Error({
+export default function ErrorPage({
   error,
   reset,
 }: {

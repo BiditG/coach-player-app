@@ -2,6 +2,9 @@ import nextConfig from 'eslint-config-next';
 import sonarjs from 'eslint-plugin-sonarjs';
 
 const eslintConfig = [
+  {
+    ignores: ['coverage/', 'coverage/**'],
+  },
   ...nextConfig,
   sonarjs.configs.recommended,
   {

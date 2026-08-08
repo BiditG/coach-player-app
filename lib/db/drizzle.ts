@@ -11,5 +11,7 @@ if (!process.env.POSTGRES_URL) {
   );
 }
 
-export const client = postgres(process.env.POSTGRES_URL);
+// Not exported: nothing outside this module needs the raw postgres client,
+// only the drizzle-wrapped `db` below.
+const client = postgres(process.env.POSTGRES_URL);
 export const db = drizzle(client, { schema });

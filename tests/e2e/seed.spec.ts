@@ -15,14 +15,16 @@ test.describe('seed for guest user', () => {
 });
 
 test.describe('seed for authenticated user', () => {
-  // TODO: Configure Supabase auth storageState
-  // See: https://playwright.dev/docs/auth
-  test('seed: dashboard loads after login', async ({ page }) => {
+  // NOTE: this seed does not perform a real login. Configure Supabase auth
+  // storageState (https://playwright.dev/docs/auth) before using this seed
+  // to drive Planner/Generator agents against authenticated-only pages.
+  test('seed: login form is ready to be filled in', async ({ page }) => {
     await page.goto('/login');
     // Fill Supabase auth form — adapt to your setup
     // await page.getByLabel('Email').fill('test@example.com');
     // await page.getByLabel('Password').fill('password');
     // await page.getByRole('button', { name: 'Sign in' }).click();
     // await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sign In' })).toBeVisible();
   });
 });

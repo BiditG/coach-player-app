@@ -3,17 +3,23 @@
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { and, eq } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
 import {
-  users,
-  teamMembers,
   invitations,
   activityLogs,
   ActivityType,
   type NewActivityLog,
 } from '@/lib/db/schema';
-import { getUser, getUserWithTeam, getTeamMemberRole } from '@/lib/db/queries';
+import {
+  getUser,
+  getUserWithTeam,
+  getTeamMemberRole,
+  updateUserName,
+  softDeleteUser,
+  deleteTeamMember,
+  findTeamMemberByEmail,
+  findPendingInvitation,
+} from '@/lib/db/queries';
 import { createClient } from '@/lib/supabase/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 
@@ -86,10 +92,7 @@ export async function updateAccount(
   const userWithTeam = await getUserWithTeam(user.id);
 
   await Promise.all([
-    db
-      .update(users)
-      .set({ name, updatedAt: new Date() })
-      .where(eq(users.id, user.id)),
+    updateUserName(user.id, name),
     logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT),
   ]);
 
@@ -202,13 +205,7 @@ export async function deleteAccount(
   // getUser() already stops returning this account (it filters on
   // isNull(deletedAt)), even though the underlying Supabase Auth user still
   // technically exists.
-  await db
-    .update(users)
-    .set({
-      deletedAt: new Date(),
-      email: `${user.email}-deleted-${user.id}`,
-    })
-    .where(eq(users.id, user.id));
+  await softDeleteUser(user.id, `${user.email}-deleted-${user.id}`);
 
   await supabase.auth.signOut();
 
@@ -263,14 +260,7 @@ export async function removeTeamMember(
     return { error: 'Only a team owner can remove team members.' };
   }
 
-  await db
-    .delete(teamMembers)
-    .where(
-      and(
-        eq(teamMembers.id, result.data.memberId),
-        eq(teamMembers.teamId, userWithTeam.teamId)
-      )
-    );
+  await deleteTeamMember(result.data.memberId, userWithTeam.teamId);
 
   await logActivity(
     userWithTeam.teamId,
@@ -320,33 +310,19 @@ export async function inviteTeamMember(
     return { error: 'Only a team owner can invite new members.' };
   }
 
-  const existingMember = await db
-    .select({ id: users.id })
-    .from(users)
-    .innerJoin(teamMembers, eq(users.id, teamMembers.userId))
-    .where(
-      and(
-        eq(users.email, email),
-        eq(teamMembers.teamId, userWithTeam.teamId)
-      )
-    )
-    .limit(1);
+  const existingMember = await findTeamMemberByEmail(
+    email,
+    userWithTeam.teamId
+  );
 
   if (existingMember.length > 0) {
     return { error: 'User is already a member of this team.' };
   }
 
-  const existingInvitation = await db
-    .select()
-    .from(invitations)
-    .where(
-      and(
-        eq(invitations.email, email),
-        eq(invitations.teamId, userWithTeam.teamId),
-        eq(invitations.status, 'pending')
-      )
-    )
-    .limit(1);
+  const existingInvitation = await findPendingInvitation(
+    email,
+    userWithTeam.teamId
+  );
 
   if (existingInvitation.length > 0) {
     return { error: 'An invitation has already been sent to this email.' };
@@ -360,8 +336,8 @@ export async function inviteTeamMember(
     status: 'pending',
   });
 
-  // TODO: send the invitation email (Resend) — out of scope for this
-  // Supabase Auth migration.
+  // NOTE: this starter does not send the invitation email (e.g. via Resend).
+  // Wiring up transactional email is left to the consumer of this starter.
 
   await logActivity(
     userWithTeam.teamId,

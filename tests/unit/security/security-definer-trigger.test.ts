@@ -58,9 +58,14 @@ describe('SECURITY: handle_new_user SECURITY DEFINER hardening', () => {
   });
 
   it('bounds the attacker-controlled name to the column length (no signup DoS)', () => {
-    const guards = /left\s*\(\s*[^,]*->>\s*'name'[^,]*,\s*100\s*\)|substr(ing)?\s*\(/i.test(
-      fn
-    );
+    // Split into two bounded checks instead of one alternation with two
+    // unbounded `[^,]*` around a fixed literal (flagged by sonarjs as
+    // super-linear / overly complex) — same detection intent, no backtracking.
+    const leftCallArgs = fn.match(/left\s*\(([^)]*)\)/i)?.[1] ?? '';
+    const truncatesNameTo100 =
+      /->>\s*'name'/i.test(leftCallArgs) && /,\s*100\s*$/.test(leftCallArgs.trim());
+    const usesSubstring = /substr(ing)?\s*\(/i.test(fn);
+    const guards = truncatesNameTo100 || usesSubstring;
     expect(
       guards,
       'name is inserted raw from NEW.raw_user_meta_data into varchar(100); a >100 ' +

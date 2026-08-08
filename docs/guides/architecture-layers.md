@@ -1,33 +1,33 @@
 # Architecture Layers Guide
 
-## Principe
+## Principle
 
-Separer l'infrastructure partagee (utils/) de la logique metier (domain/) pour eviter le couplage.
+Separate shared infrastructure (utils/) from business logic (domain/) to avoid coupling.
 
-## Structure recommandee
+## Recommended structure
 
 ```
 project/
-├── utils/                  # Infrastructure partagee
+├── utils/                  # Shared infrastructure
 │   ├── api/               # error-handler, rate-limit, auth-middleware
 │   ├── db/                # Drizzle client, schema, migrations
-│   ├── supabase/          # Client Supabase (auth, cookies)
+│   ├── supabase/          # Supabase client (auth, cookies)
 │   └── stripe/            # Stripe helpers
-├── domain/                # Logique metier (creer quand le projet grandit)
-│   └── {feature}/         # Un dossier par feature/vertical
+├── domain/                # Business logic (create when the project grows)
+│   └── {feature}/         # One folder per feature/vertical
 │       ├── actions.ts     # Server actions
 │       ├── queries.ts     # Data access
-│       └── types.ts       # Types metier
+│       └── types.ts       # Business types
 ├── components/            # UI components (React)
 │   ├── ui/               # shadcn/ui primitives
-│   └── {feature}/        # Composants par feature
-├── app/                   # Routes Next.js (thin layer)
-│   ├── api/              # API routes (appellent domain/)
-│   └── (pages)/          # Pages (appellent domain/ ou actions)
-└── lib/                   # Helpers specifiques framework (rare)
+│   └── {feature}/        # Components per feature
+├── app/                   # Next.js routes (thin layer)
+│   ├── api/              # API routes (call domain/)
+│   └── (pages)/          # Pages (call domain/ or actions)
+└── lib/                   # Framework-specific helpers (rare)
 ```
 
-## Regles d'import
+## Import rules
 
 ```
 app/ ──> domain/ ──> utils/
@@ -35,34 +35,34 @@ app/ ──> domain/ ──> utils/
   └──> components/
 ```
 
-| Depuis | Peut importer | NE DOIT PAS importer |
+| From | Can import | MUST NOT import |
 |--------|--------------|---------------------|
 | `app/` | domain/, utils/, components/ | — |
 | `domain/` | utils/ | app/, components/ |
 | `components/` | utils/supabase/ (auth only) | utils/db/, domain/ |
-| `utils/` | autres utils/ | app/, components/, domain/ |
+| `utils/` | other utils/ | app/, components/, domain/ |
 
-## Quand creer domain/
+## When to create domain/
 
-- **MVP (< 10 routes API)**: pas necessaire, utils/ suffit
-- **Croissance (10-30 routes)**: extraire la logique metier dans domain/
-- **Scale (30+ routes)**: domain/ obligatoire, un dossier par feature
+- **MVP (< 10 API routes)**: not necessary, utils/ is enough
+- **Growth (10-30 routes)**: extract business logic into domain/
+- **Scale (30+ routes)**: domain/ mandatory, one folder per feature
 
 ## Enforcement
 
-Les regles sont testees automatiquement dans `tests/architecture/layers.test.ts`.
+The rules are automatically tested in `tests/architecture/layers.test.ts`.
 
 ```bash
 npm run test:arch
 ```
 
-Ajouter des regles au fur et a mesure que le projet grandit.
+Add rules as the project grows.
 
-## Exemple concret
+## Concrete example
 
-**Avant (logique dans la route API):**
+**Before (logic in the API route):**
 ```typescript
-// app/api/items/route.ts — TROP de logique ici
+// app/api/items/route.ts — TOO much logic here
 export const POST = withErrorHandler(async (request) => {
     const user = await getUser();
     const body = await request.json();
@@ -73,7 +73,7 @@ export const POST = withErrorHandler(async (request) => {
 });
 ```
 
-**Apres (logique dans domain/):**
+**After (logic in domain/):**
 ```typescript
 // domain/items/create.ts
 export async function createItem(userId: string, data: CreateItemInput) {
@@ -94,7 +94,7 @@ export const POST = withErrorHandler(async (request) => {
 
 ## Reference
 
-Pattern inspire de projets SaaS en production (1000+ commits):
+Pattern inspired by production SaaS projects (1000+ commits):
 - `src/core/` = infrastructure (20+ modules)
-- `src/domain/{feature}/` = logique metier (15+ modules)
-- ADRs documentant les decisions architecturales
+- `src/domain/{feature}/` = business logic (15+ modules)
+- ADRs documenting architectural decisions

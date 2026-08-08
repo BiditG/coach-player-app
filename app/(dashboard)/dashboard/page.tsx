@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   Card,
   CardContent,
@@ -40,6 +40,13 @@ function SubscriptionSkeleton() {
 function ManageSubscription() {
   const { data: teamData } = useSWR<TeamDataWithMembers>('/api/team', fetcher);
 
+  let subscriptionLabel = 'No active subscription';
+  if (teamData?.subscriptionStatus === 'active') {
+    subscriptionLabel = 'Billed monthly';
+  } else if (teamData?.subscriptionStatus === 'trialing') {
+    subscriptionLabel = 'Trial period';
+  }
+
   return (
     <Card className="mb-8">
       <CardHeader>
@@ -53,11 +60,7 @@ function ManageSubscription() {
                 Current Plan: {teamData?.planName || 'Free'}
               </p>
               <p className="text-sm text-muted-foreground">
-                {teamData?.subscriptionStatus === 'active'
-                  ? 'Billed monthly'
-                  : teamData?.subscriptionStatus === 'trialing'
-                  ? 'Trial period'
-                  : 'No active subscription'}
+                {subscriptionLabel}
               </p>
             </div>
             <form action={customerPortalAction}>
