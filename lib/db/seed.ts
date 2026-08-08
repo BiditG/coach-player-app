@@ -41,6 +41,15 @@ async function createStripeProducts() {
 }
 
 async function seed() {
+  // Guard: this seed creates a demo owner with well-known credentials. Running
+  // it against a production database would create a publicly-known owner account.
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'Refusing to run the seed with NODE_ENV=production: it creates a demo ' +
+        'owner (test@test.com / admin123). Run it only against a dev database.'
+    );
+  }
+
   const email = 'test@test.com';
   const password = 'admin123';
 

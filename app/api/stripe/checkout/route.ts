@@ -3,6 +3,7 @@ import { db } from '@/lib/db/drizzle';
 import { users, teams, teamMembers } from '@/lib/db/schema';
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/payments/stripe';
+import { getUser } from '@/lib/db/queries';
 import Stripe from 'stripe';
 
 export async function GET(request: NextRequest) {
@@ -17,6 +18,23 @@ export async function GET(request: NextRequest) {
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
       expand: ['customer', 'subscription'],
     });
+
+    // This is a public GET (Stripe success_url). Do NOT trust the session_id
+    // alone: authenticate the caller, ensure the session belongs to them, and
+    // ensure it is actually paid — otherwise anyone with a session_id could
+    // flip a team's subscription state (incl. an unpaid one).
+    const authUser = await getUser();
+    if (!authUser) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+    if (session.client_reference_id !== authUser.id) {
+      throw new Error(
+        'Checkout session does not belong to the authenticated user.'
+      );
+    }
+    if (session.status !== 'complete' || session.payment_status === 'unpaid') {
+      throw new Error('Checkout session is not complete or not paid.');
+    }
 
     if (!session.customer || typeof session.customer === 'string') {
       throw new Error('Invalid customer data from Stripe.');

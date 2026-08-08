@@ -35,7 +35,11 @@ export async function updateSession(request: NextRequest) {
     } = await supabase.auth.getUser()
     const url = request.nextUrl.clone()
 
-    if (request.nextUrl.pathname.startsWith('/webhook')) {
+    // Stripe posts to /api/stripe/webhook with no user cookie; let it through
+    // (the route verifies the Stripe signature itself). NOTE: this must match
+    // the real route path — a stale '/webhook' prefix both breaks the webhook
+    // in prod (307 -> /login) and is a latent auth bypass for a non-existent path.
+    if (request.nextUrl.pathname.startsWith('/api/stripe/webhook')) {
         return supabaseResponse
     }
 

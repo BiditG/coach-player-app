@@ -60,41 +60,42 @@ CREATE POLICY "users_select_self_or_teammate" ON "users"
   );
 --> statement-breakpoint
 
-CREATE POLICY "users_update_self" ON "users"
-  FOR UPDATE
-  USING (id = auth.uid())
-  WITH CHECK (id = auth.uid());
+-- No UPDATE/DELETE policy on `users` via PostgREST: the app writes user rows
+-- through its direct DB connection (bypasses RLS), so client writes via the
+-- anon key are never legitimate. Leaving UPDATE/DELETE to the RLS default-deny
+-- stops a client from self-editing role/email or self-deleting (which would
+-- bypass the app's reauth / soft-delete / audit flow) using the public key.
 --> statement-breakpoint
 
-CREATE POLICY "users_delete_self" ON "users"
-  FOR DELETE
-  USING (id = auth.uid());
---> statement-breakpoint
+-- IMPORTANT — these four tables are SELECT-only via PostgREST (anon key).
+-- All writes (create team, invite, change role, log activity…) go exclusively
+-- through the app's direct DB connection (bypasses RLS) and are authorized in
+-- the server actions (e.g. owner-role gate in app/(login)/actions.ts). Making
+-- the client-facing policies FOR ALL would let ANY authenticated member PATCH
+-- their own role to 'owner', delete the owner, or flip their team's
+-- subscription to active — all via the public anon key, bypassing every server
+-- action gate. Hence FOR SELECT only.
 
--- teams: readable/writable only by members of that team.
+-- teams: readable by members; writes go through the app (direct DB).
 CREATE POLICY "teams_tenant_isolation" ON "teams"
-  FOR ALL
-  USING (id IN (SELECT public.get_my_team_ids()))
-  WITH CHECK (id IN (SELECT public.get_my_team_ids()));
+  FOR SELECT
+  USING (id IN (SELECT public.get_my_team_ids()));
 --> statement-breakpoint
 
--- team_members: scoped via the SECURITY DEFINER helper above to avoid the
--- self-referential RLS recursion described there.
+-- team_members: readable by members (scoped via the SECURITY DEFINER helper to
+-- avoid self-referential RLS recursion); role changes go through the app.
 CREATE POLICY "team_members_tenant_isolation" ON "team_members"
-  FOR ALL
-  USING (team_id IN (SELECT public.get_my_team_ids()))
-  WITH CHECK (team_id IN (SELECT public.get_my_team_ids()));
+  FOR SELECT
+  USING (team_id IN (SELECT public.get_my_team_ids()));
 --> statement-breakpoint
 
--- activity_logs: scoped to the caller's team(s).
+-- activity_logs: readable, scoped to the caller's team(s); written by the app.
 CREATE POLICY "activity_logs_tenant_isolation" ON "activity_logs"
-  FOR ALL
-  USING (team_id IN (SELECT public.get_my_team_ids()))
-  WITH CHECK (team_id IN (SELECT public.get_my_team_ids()));
+  FOR SELECT
+  USING (team_id IN (SELECT public.get_my_team_ids()));
 --> statement-breakpoint
 
--- invitations: scoped to the caller's team(s).
+-- invitations: readable, scoped to the caller's team(s); written by the app.
 CREATE POLICY "invitations_tenant_isolation" ON "invitations"
-  FOR ALL
-  USING (team_id IN (SELECT public.get_my_team_ids()))
-  WITH CHECK (team_id IN (SELECT public.get_my_team_ids()));
+  FOR SELECT
+  USING (team_id IN (SELECT public.get_my_team_ids()));
