@@ -112,6 +112,39 @@ applied on deploy. A local `npm run build` needs a `.env` (run `cp .env.example 
 first) but does **not** require a live/reachable database — build-time only checks
 that the variables are set.
 
+## Security model
+
+This app uses **two data paths**, and the distinction is load-bearing for security:
+
+1. **The app itself** reads/writes via a direct Postgres connection
+   (`POSTGRES_URL`, `lib/db/drizzle.ts`) which **bypasses Row-Level Security**.
+   All authorization for writes lives in the server actions
+   (`app/(login)/actions.ts` — e.g. the owner-role gate on team mutations).
+2. **The Supabase client** (anon / `authenticated` key) can reach the tables via
+   Supabase's auto-exposed PostgREST API. **RLS is the only thing protecting this
+   path**, so the client-facing policies are **`SELECT`-only**
+   (`lib/db/migrations/0002_rls_policies.sql`).
+
+> ⚠️ **Do not widen these policies to `FOR ALL`.** If you do, any authenticated
+> member can `PATCH` their own row to `role = 'owner'`, remove the real owner, or
+> flip their team's `subscription_status` to `active` — all via the public anon
+> key, bypassing every server-action check. If you need client-side writes,
+> add role-scoped `WITH CHECK` policies rather than a blanket `FOR ALL`.
+
+## Known limitations
+
+- **RLS is verified statically, not at runtime.** `test:rls` and the security
+  unit tests assert the policy *shape*; they do not spin up a real Supabase
+  instance with two tenants. Run the runtime isolation check against a live
+  database before relying on this in production.
+- **The Stripe checkout success callback** (`/api/stripe/checkout`) updates
+  subscription state on an authenticated GET; treat it as defence-in-depth only —
+  the **signed webhook** (`/api/stripe/webhook`) is the source of truth.
+- **Application-code test coverage is ~0%.** The suite is intentionally
+  fitness/security-oriented (it reads source & SQL statically) and does not
+  execute `app/**`/`lib/**`. The coverage threshold is set to 0 to reflect this
+  honestly — raise it as you add behavioural tests.
+
 ## License
 
 MIT. Forked from [`nextjs/saas-starter`](https://github.com/nextjs/saas-starter)

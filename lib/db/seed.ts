@@ -42,11 +42,17 @@ async function createStripeProducts() {
 
 async function seed() {
   // Guard: this seed creates a demo owner with well-known credentials. Running
-  // it against a production database would create a publicly-known owner account.
-  if (process.env.NODE_ENV === 'production') {
+  // it against any production-like environment would create a publicly-known
+  // owner account, so we refuse NODE_ENV=production AND Vercel prod/preview.
+  const isProdLike =
+    process.env.NODE_ENV === 'production' ||
+    process.env.VERCEL_ENV === 'production' ||
+    process.env.VERCEL_ENV === 'preview';
+  if (isProdLike) {
     throw new Error(
-      'Refusing to run the seed with NODE_ENV=production: it creates a demo ' +
-        'owner (test@test.com / admin123). Run it only against a dev database.'
+      'Refusing to run the seed in a production-like environment ' +
+        '(NODE_ENV=production or VERCEL_ENV=production/preview): it creates a ' +
+        'demo owner (test@test.com / admin123). Run it only against a dev database.'
     );
   }
 
