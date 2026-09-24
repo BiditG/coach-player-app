@@ -8,8 +8,6 @@ const config: KnipConfig = {
   // like DropdownMenuGroup, etc.) — many are unused in this starter today but
   // are meant to be used as the project grows. Not dead code to prune.
   ignore: ["components/ui/**"],
-  // CLI invoked via the `stripe:listen` script, not imported as a module.
-  ignoreBinaries: ["stripe"],
   ignoreDependencies: [
     // Drives commitlint.config.js (`@commitlint/config-conventional`); knip
     // doesn't detect the commit-msg hook wiring as usage.

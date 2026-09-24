@@ -1,130 +1,16 @@
-import { Button } from '@/components/ui/button';
-import { ArrowRight, CreditCard, Database } from 'lucide-react';
-import { Terminal } from './terminal';
+import Image from 'next/image';
+import Link from 'next/link';
+import { ArrowRight, Check, Play, Sparkles, UserRound } from 'lucide-react';
+import { getCurrentUser } from '@/lib/auth';
 
-export default function HomePage() {
-  return (
-    <main>
-      <section className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="lg:grid lg:grid-cols-12 lg:gap-8">
-            <div className="sm:text-center md:max-w-2xl md:mx-auto lg:col-span-6 lg:text-left">
-              <h1 className="text-4xl font-bold text-gray-900 tracking-tight sm:text-5xl md:text-6xl">
-                Build Your SaaS
-                <span className="block text-orange-500">Faster Than Ever</span>
-              </h1>
-              <p className="mt-3 text-base text-gray-500 sm:mt-5 sm:text-xl lg:text-lg xl:text-xl">
-                Launch your SaaS product in record time with our powerful,
-                ready-to-use template. Packed with modern technologies and
-                essential integrations.
-              </p>
-              <div className="mt-8 sm:max-w-lg sm:mx-auto sm:text-center lg:text-left lg:mx-0">
-                <a
-                  href="https://vercel.com/templates/next.js/next-js-saas-starter"
-                  target="_blank"
-                >
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    className="text-lg rounded-full"
-                  >
-                    Deploy your own
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </a>
-              </div>
-            </div>
-            <div className="mt-12 relative sm:max-w-lg sm:mx-auto lg:mt-0 lg:max-w-none lg:mx-0 lg:col-span-6 lg:flex lg:items-center">
-              <Terminal />
-            </div>
-          </div>
-        </div>
-      </section>
+const steps = [
+  ['01', 'Share your video', 'Upload a session, training clip, or presentation in a few seconds.'],
+  ['02', 'Choose your feedback', 'Start with structured AI insight or request a professional review.'],
+  ['03', 'Put it into practice', 'Get clear notes at the moments that matter and improve with intent.']
+];
 
-      <section className="py-16 bg-white w-full">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="lg:grid lg:grid-cols-3 lg:gap-8">
-            <div>
-              <div className="flex items-center justify-center h-12 w-12 rounded-md bg-orange-500 text-white">
-                <svg viewBox="0 0 24 24" className="h-6 w-6">
-                  <path
-                    fill="currentColor"
-                    d="M14.23 12.004a2.236 2.236 0 0 1-2.235 2.236 2.236 2.236 0 0 1-2.236-2.236 2.236 2.236 0 0 1 2.235-2.236 2.236 2.236 0 0 1 2.236 2.236zm2.648-10.69c-1.346 0-3.107.96-4.888 2.622-1.78-1.653-3.542-2.602-4.887-2.602-.41 0-.783.093-1.106.278-1.375.793-1.683 3.264-.973 6.365C1.98 8.917 0 10.42 0 12.004c0 1.59 1.99 3.097 5.043 4.03-.704 3.113-.39 5.588.988 6.38.32.187.69.275 1.102.275 1.345 0 3.107-.96 4.888-2.624 1.78 1.654 3.542 2.603 4.887 2.603.41 0 .783-.09 1.106-.275 1.374-.792 1.683-3.263.973-6.365C22.02 15.096 24 13.59 24 12.004c0-1.59-1.99-3.097-5.043-4.032.704-3.11.39-5.587-.988-6.38-.318-.184-.688-.277-1.092-.278zm-.005 1.09v.006c.225 0 .406.044.558.127.666.382.955 1.835.73 3.704-.054.46-.142.945-.25 1.44-.96-.236-2.006-.417-3.107-.534-.66-.905-1.345-1.727-2.035-2.447 1.592-1.48 3.087-2.292 4.105-2.295zm-9.77.02c1.012 0 2.514.808 4.11 2.28-.686.72-1.37 1.537-2.02 2.442-1.107.117-2.154.298-3.113.538-.112-.49-.195-.964-.254-1.42-.23-1.868.054-3.32.714-3.707.19-.09.4-.127.563-.132zm4.882 3.05c.455.468.91.992 1.36 1.564-.44-.02-.89-.034-1.345-.034-.46 0-.915.01-1.36.034.44-.572.895-1.096 1.345-1.565zM12 8.1c.74 0 1.477.034 2.202.093.406.582.802 1.203 1.183 1.86.372.64.71 1.29 1.018 1.946-.308.655-.646 1.31-1.013 1.95-.38.66-.773 1.288-1.18 1.87-.728.063-1.466.098-2.21.098-.74 0-1.477-.035-2.202-.093-.406-.582-.802-1.204-1.183-1.86-.372-.64-.71-1.29-1.018-1.946.303-.657.646-1.313 1.013-1.954.38-.66.773-1.286 1.18-1.868.728-.064 1.466-.098 2.21-.098zm-3.635.254c-.24.377-.48.763-.704 1.16-.225.39-.435.782-.635 1.174-.265-.656-.49-1.31-.676-1.947.64-.15 1.315-.283 2.015-.386zm7.26 0c.695.103 1.365.23 2.006.387-.18.632-.405 1.282-.66 1.933-.2-.39-.41-.783-.64-1.174-.225-.392-.465-.774-.705-1.146zm3.063.675c.484.15.944.317 1.375.498 1.732.74 2.852 1.708 2.852 2.476-.005.768-1.125 1.74-2.857 2.475-.42.18-.88.342-1.355.493-.28-.958-.646-1.956-1.1-2.98.45-1.017.81-2.01 1.085-2.964zm-13.395.004c.278.96.645 1.957 1.1 2.98-.45 1.017-.812 2.01-1.086 2.964-.484-.15-.944-.318-1.37-.5-1.732-.737-2.852-1.706-2.852-2.474 0-.768 1.12-1.742 2.852-2.476.42-.18.88-.342 1.356-.494zm11.678 4.28c.265.657.49 1.312.676 1.948-.64.157-1.316.29-2.016.39.24-.375.48-.762.705-1.158.225-.39.435-.788.636-1.18zm-9.945.02c.2.392.41.783.64 1.175.23.39.465.772.705 1.143-.695-.102-1.365-.23-2.006-.386.18-.63.406-1.282.66-1.933zM17.92 16.32c.112.493.2.968.254 1.423.23 1.868-.054 3.32-.714 3.708-.147.09-.338.128-.563.128-1.012 0-2.514-.807-4.11-2.28.686-.72 1.37-1.536 2.02-2.44 1.107-.118 2.154-.3 3.113-.54zm-11.83.01c.96.234 2.006.415 3.107.532.66.905 1.345 1.727 2.035 2.446-1.595 1.483-3.092 2.295-4.11 2.295-.22-.005-.406-.05-.553-.132-.666-.38-.955-1.834-.73-3.703.054-.46.142-.944.25-1.438zm4.56.64c.44.02.89.034 1.345.034.46 0 .915-.01 1.36-.034-.44.572-.895 1.095-1.345 1.565-.455-.47-.91-.993-1.36-1.565z"
-                  />
-                </svg>
-              </div>
-              <div className="mt-5">
-                <h2 className="text-lg font-medium text-gray-900">
-                  Next.js and React
-                </h2>
-                <p className="mt-2 text-base text-gray-500">
-                  Leverage the power of modern web technologies for optimal
-                  performance and developer experience.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-10 lg:mt-0">
-              <div className="flex items-center justify-center h-12 w-12 rounded-md bg-orange-500 text-white">
-                <Database className="h-6 w-6" />
-              </div>
-              <div className="mt-5">
-                <h2 className="text-lg font-medium text-gray-900">
-                  Postgres and Drizzle ORM
-                </h2>
-                <p className="mt-2 text-base text-gray-500">
-                  Robust database solution with an intuitive ORM for efficient
-                  data management and scalability.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-10 lg:mt-0">
-              <div className="flex items-center justify-center h-12 w-12 rounded-md bg-orange-500 text-white">
-                <CreditCard className="h-6 w-6" />
-              </div>
-              <div className="mt-5">
-                <h2 className="text-lg font-medium text-gray-900">
-                  Stripe Integration
-                </h2>
-                <p className="mt-2 text-base text-gray-500">
-                  Seamless payment processing and subscription management with
-                  industry-leading Stripe integration.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="py-16 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="lg:grid lg:grid-cols-2 lg:gap-8 lg:items-center">
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">
-                Ready to launch your SaaS?
-              </h2>
-              <p className="mt-3 max-w-3xl text-lg text-gray-500">
-                Our template provides everything you need to get your SaaS up
-                and running quickly. Don&apos;t waste time on boilerplate - focus on
-                what makes your product unique.
-              </p>
-            </div>
-            <div className="mt-8 lg:mt-0 flex justify-center lg:justify-end">
-              <a href="https://github.com/nextjs/saas-starter" target="_blank">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="text-lg rounded-full"
-                >
-                  View the code
-                  <ArrowRight className="ml-3 h-6 w-6" />
-                </Button>
-              </a>
-            </div>
-          </div>
-        </div>
-      </section>
-    </main>
-  );
+export default async function Home() {
+  const user = await getCurrentUser();
+  const cta = user ? '/dashboard/upload' : '/signup';
+  return <main className="min-h-screen bg-[#f7f7f8] p-0 sm:p-2 md:p-3"><div className="mx-auto max-w-[1500px] overflow-hidden bg-white sm:rounded-[28px] sm:border sm:border-black/[.06] sm:shadow-[0_18px_70px_rgba(0,0,0,.06)]"><header className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 sm:px-8"><Link href="/" className="flex items-center gap-2 text-[15px] font-semibold tracking-[-.05em]"><span className="grid size-7 place-items-center rounded-lg bg-black text-xs text-white">F</span>Framewise</Link><nav className="hidden items-center gap-7 text-xs font-medium text-neutral-500 md:flex"><a href="#how">How it works</a><a href="#ai">AI analysis</a><a href="#experts">Professionals</a></nav><div className="flex items-center gap-3 text-xs"><Link href="/login" className="hidden text-neutral-500 sm:block">Sign in</Link><Link href={cta} className="rounded-full bg-[#19191b] px-4 py-2.5 font-medium text-white">Get started</Link></div></header><section className="mx-auto grid max-w-7xl gap-10 px-5 pb-16 pt-12 sm:px-8 sm:pb-24 sm:pt-20 lg:grid-cols-[.82fr_1.18fr] lg:items-center lg:gap-16"><div className="relative z-10"><p className="text-xs font-medium text-neutral-500">VIDEO FEEDBACK, MADE CLEAR</p><h1 className="mt-5 max-w-xl text-[48px] font-semibold leading-[.94] tracking-[-.07em] text-[#1d1d1f] sm:text-7xl lg:text-[78px]">See more.<br/>Improve faster.</h1><p className="mt-7 max-w-md text-[15px] leading-7 text-neutral-500 sm:text-base">Framewise turns your video into the specific, practical feedback you need—powered by AI or experienced professionals.</p><div className="mt-8 flex flex-wrap gap-3"><Link href={cta} className="rounded-full bg-black px-5 py-3 text-sm font-medium text-white transition hover:scale-[1.02]">Analyze a video <ArrowRight className="ml-1 inline size-4"/></Link><a href="#how" className="rounded-full border border-black/[.08] bg-white px-5 py-3 text-sm font-medium">How it works</a></div><div className="mt-11 flex items-center gap-3"><div className="flex -space-x-2">{['A','M','L','S'].map((x,i)=><span key={x} className={`grid size-8 place-items-center rounded-full border-2 border-white text-[10px] font-semibold text-white ${['bg-stone-700','bg-amber-700','bg-neutral-900','bg-emerald-800'][i]}`}>{x}</span>)}</div><p className="text-xs leading-5 text-neutral-500">Made for people who care<br/>about getting better.</p></div></div><div className="relative mx-auto w-full max-w-[650px]"><div className="relative overflow-hidden rounded-[24px] bg-neutral-900 shadow-[0_24px_55px_rgba(0,0,0,.18)]"><Image src="/images/framewise-hero.png" alt="Skateboarder mid-air during a session" width={1120} height={1400} priority className="aspect-[1.18/1] w-full object-cover object-center"/><div className="absolute inset-x-4 bottom-4 rounded-xl bg-black/55 p-4 text-white backdrop-blur-sm"><div className="flex items-center justify-between text-xs"><span className="font-medium">Afternoon session</span><span className="text-white/70">00:24</span></div><div className="mt-3 h-1 rounded-full bg-white/30"><div className="h-full w-[58%] rounded-full bg-white"/></div><div className="mt-3 flex items-center gap-2 text-xs"><span className="grid size-7 place-items-center rounded-full bg-white text-black"><Play className="size-3 fill-black"/></span><span className="text-white/80">Playback preview</span></div></div></div><div className="absolute -right-2 top-6 hidden w-64 rounded-2xl border border-black/[.06] bg-white p-4 shadow-[0_16px_45px_rgba(0,0,0,.12)] sm:block"><div className="flex gap-3"><span className="grid size-10 place-items-center rounded-xl bg-amber-100 text-lg">✦</span><div><p className="text-xs font-semibold">Professional feedback</p><p className="mt-1 text-[11px] leading-4 text-neutral-500">Landing control and board alignment</p><p className="mt-2 text-[10px] text-neutral-400">Reviewed by Alex R. · Pro</p></div></div></div></div></section><section id="how" className="border-y border-black/[.06] bg-[#fafafa] py-16 sm:py-24"><div className="mx-auto max-w-7xl px-5 sm:px-8"><div className="max-w-xl"><p className="eyebrow">A clearer way forward</p><h2 className="mt-4 text-3xl font-semibold tracking-[-.055em] sm:text-5xl">Feedback that meets you where you are.</h2></div><div className="mt-12 grid gap-4 md:grid-cols-3">{steps.map(([number,title,copy])=><article key={number} className="rounded-2xl border border-black/[.06] bg-white p-6 sm:p-7"><p className="text-xs font-medium text-neutral-400">{number}</p><h3 className="mt-11 text-lg font-semibold tracking-[-.03em]">{title}</h3><p className="mt-3 max-w-xs text-sm leading-6 text-neutral-500">{copy}</p></article>)}</div></div></section><section className="mx-auto grid max-w-7xl gap-4 px-5 py-16 sm:px-8 sm:py-24 lg:grid-cols-2"><article id="ai" className="rounded-[24px] bg-[#f1f3f5] p-7 sm:p-10"><span className="grid size-10 place-items-center rounded-xl bg-white shadow-sm"><Sparkles className="size-[18px]"/></span><p className="mt-14 text-xs font-medium text-neutral-400">AI ANALYSIS</p><h2 className="mt-4 max-w-sm text-3xl font-semibold tracking-[-.055em]">A thoughtful first read, on demand.</h2><p className="mt-4 max-w-sm text-sm leading-6 text-neutral-500">Get a structured report built around strengths, opportunities, timestamps, and next steps.</p><Link href={cta} className="mt-8 inline-block text-sm font-medium">Explore AI analysis <ArrowRight className="ml-1 inline size-4"/></Link></article><article id="experts" className="rounded-[24px] bg-[#1d1d1f] p-7 text-white sm:p-10"><span className="grid size-10 place-items-center rounded-xl bg-white/10"><UserRound className="size-[18px]"/></span><p className="mt-14 text-xs font-medium text-white/40">PROFESSIONAL ANALYSIS</p><h2 className="mt-4 max-w-sm text-3xl font-semibold tracking-[-.055em]">A human perspective when it counts.</h2><p className="mt-4 max-w-sm text-sm leading-6 text-white/60">Request personalized notes from an approved reviewer who understands your craft.</p><Link href={cta} className="mt-8 inline-block text-sm font-medium">Meet the professionals <ArrowRight className="ml-1 inline size-4"/></Link></article></section><section className="border-t border-black/[.06] bg-[#fafafa] px-5 py-16 text-center sm:px-8 sm:py-24"><p className="eyebrow">Ready when you are</p><h2 className="mx-auto mt-4 max-w-2xl text-4xl font-semibold tracking-[-.06em] sm:text-6xl">Make your next video<br/>your best one yet.</h2><Link href={cta} className="mt-8 inline-block rounded-full bg-black px-5 py-3 text-sm font-medium text-white">Start your analysis <ArrowRight className="ml-1 inline size-4"/></Link></section><footer className="flex flex-col gap-4 px-5 py-7 text-xs text-neutral-400 sm:flex-row sm:items-center sm:justify-between sm:px-8"><Link href="/" className="font-semibold text-neutral-700">Framewise</Link><p>Video feedback for deliberate practice.</p><div className="flex gap-4"><a href="#ai">AI analysis</a><a href="#experts">Professionals</a></div></footer></div></main>;
 }

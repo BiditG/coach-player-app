@@ -35,14 +35,6 @@ export async function updateSession(request: NextRequest) {
     } = await supabase.auth.getUser()
     const url = request.nextUrl.clone()
 
-    // Stripe posts to /api/stripe/webhook with no user cookie; let it through
-    // (the route verifies the Stripe signature itself). NOTE: this must match
-    // the real route path — a stale '/webhook' prefix both breaks the webhook
-    // in prod (307 -> /login) and is a latent auth bypass for a non-existent path.
-    if (request.nextUrl.pathname.startsWith('/api/stripe/webhook')) {
-        return supabaseResponse
-    }
-
     if (
         !user &&
         !request.nextUrl.pathname.startsWith('/login') &&
@@ -55,9 +47,9 @@ export async function updateSession(request: NextRequest) {
         url.pathname = '/login'
         return NextResponse.redirect(url)
     }
-    // // If user is logged in, redirect to dashboard
+    // The community feed is the authenticated home experience.
     if (user && request.nextUrl.pathname === '/') {
-        url.pathname = '/dashboard'
+        url.pathname = '/feed'
         return NextResponse.redirect(url)
     }
     // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're

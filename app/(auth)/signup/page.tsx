@@ -34,8 +34,8 @@ export default function SignupPage() {
 
   if (success) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Card className="w-full max-w-md">
+      <div className="grid min-h-screen place-items-center bg-[#f7f7f8] p-5">
+        <Card className="w-full max-w-[390px] rounded-[26px] border-black/[.06] p-2 shadow-[0_18px_70px_rgba(0,0,0,.08)]">
           <CardHeader>
             <CardTitle>Check your email</CardTitle>
             <CardDescription>
@@ -49,11 +49,12 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Create Account</CardTitle>
-          <CardDescription>Sign up to get started</CardDescription>
+    <div className="grid min-h-screen place-items-center bg-[#f7f7f8] p-5">
+      <Card className="w-full max-w-[390px] rounded-[26px] border-black/[.06] bg-white p-2 shadow-[0_18px_70px_rgba(0,0,0,.08)]">
+        <CardHeader className="pt-8">
+          <div className="mb-6 grid size-9 place-items-center rounded-xl bg-black text-sm font-semibold text-white">F</div>
+          <CardTitle className="text-[29px] tracking-[-.05em]">Begin improving.</CardTitle>
+          <CardDescription className="pt-1">Create your Framewise account.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignup} className="space-y-4">
@@ -79,13 +80,13 @@ export default function SignupPage() {
               />
             </div>
             {error && <p className="text-sm text-red-500">{error}</p>}
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Creating account...' : 'Sign Up'}
+            <Button type="submit" className="mt-2 w-full rounded-full bg-black" disabled={loading}>
+              {loading ? 'Creating account...' : 'Continue'}
             </Button>
           </form>
           <p className="mt-4 text-center text-sm text-muted-foreground">
             Already have an account?{' '}
-            <Link href="/login" className="underline">Sign in</Link>
+            <Link href="/login" className="font-medium text-black underline-offset-4 hover:underline">Sign in</Link>
           </p>
         </CardContent>
       </Card>

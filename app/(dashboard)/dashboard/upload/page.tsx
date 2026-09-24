@@ -1,0 +1,1 @@
+import { UploadDropzone } from '@/components/upload-dropzone'; export default function UploadPage(){return <><p className="eyebrow">New video</p><h1 className="page-title mt-2">Upload your video</h1><p className="mt-3 text-neutral-500">Your file uploads directly to secure storage—never through the app server.</p><UploadDropzone/></>}
