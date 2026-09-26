@@ -1,95 +1,40 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { Award, ChevronRight, Sparkles, Users, Activity, Video } from 'lucide-react';
 import { PostCard } from './post-card';
-import { Post } from './post-creator';
-
-const INITIAL_POSTS: Post[] = [
-  {
-    id: 'post-arjun-1',
-    authorName: 'Arjun Mehta',
-    authorHandle: '@arjunmehta',
-    timeAgo: '2h ago',
-    location: 'Local Match • Mumbai',
-    caption: 'Good game today! Nice to get some time in the middle again. 🏏',
-    imageUrl: '/images/cricket-feed-poster.png',
-    hasStatCard: true,
-    statCard: {
-      score: '78 (52)',
-      strikeRate: '150.0',
-      fours: '8',
-      sixes: '3',
-      dotBalls: '12',
-      matchTitle: 'Rivals CC vs Heritage XI',
-      matchResult: 'Won by 32 runs',
-      tag: 'Match'
-    },
-    fireCount: 124,
-    hasFired: false,
-    commentsCount: 18,
-    bookmarked: false,
-    comments: [
-      { id: 'c1', author: 'Karan Desai', text: 'Clean striking! That pull shot in the 8th over was effortless.', timeAgo: '1h ago' },
-      { id: 'c2', author: 'Coach Vikram', text: 'Stance looking solid. Maintain that back-foot alignment.', timeAgo: '45m ago' }
-    ],
-    medals: ['Technical excellence'],
-    createdAt: new Date(Date.now() - 7200000).toISOString()
-  },
-  {
-    id: 'post-karan-2',
-    authorName: 'Karan Desai',
-    authorHandle: '@karandesai',
-    timeAgo: '5h ago',
-    location: 'League Match • Bangalore',
-    caption: 'Tight spell in the death overs. 4 overs, 2 wickets for 18 runs. Focused on seam movement today. ⚡',
-    imageUrl: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?q=80&w=1200&auto=format&fit=crop',
-    hasStatCard: true,
-    statCard: {
-      score: '4/18 (4.0)',
-      strikeRate: 'Econ 4.50',
-      fours: '0',
-      sixes: '1',
-      dotBalls: '16',
-      matchTitle: 'Bangalore Strikers vs Knights CC',
-      matchResult: 'Won by 4 wickets',
-      tag: 'Bowling'
-    },
-    fireCount: 89,
-    hasFired: true,
-    commentsCount: 9,
-    bookmarked: true,
-    comments: [
-      { id: 'c3', author: 'Rohan Iyer', text: 'Great control on the outswingers mate!', timeAgo: '3h ago' }
-    ],
-    medals: ['Precision'],
-    createdAt: new Date(Date.now() - 18000000).toISOString()
-  }
-];
+import { Post, getSavedPosts } from '@/lib/post-store';
 
 export function FeedList({ userRole }: { userRole?: string }) {
-  const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [activeTab, setActiveTab] = useState('For you');
 
+  const refreshPosts = () => {
+    setPosts(getSavedPosts());
+  };
+
   useEffect(() => {
-    const handleNewPost = (e: Event) => {
-      const customEvent = e as CustomEvent<Post>;
-      if (customEvent.detail) {
-        setPosts((prev) => [customEvent.detail, ...prev]);
-      }
+    refreshPosts();
+
+    const handleStorageChange = () => {
+      refreshPosts();
     };
 
-    window.addEventListener('sprintnp:new-post', handleNewPost);
-    return () => window.removeEventListener('sprintnp:new-post', handleNewPost);
+    window.addEventListener('sprintnp:posts-changed', handleStorageChange);
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('sprintnp:posts-changed', handleStorageChange);
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   const isCoach = userRole === 'PROFESSIONAL' || userRole === 'ADMIN';
 
   return (
-    <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_310px]">
+    <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_310px] w-full">
       {/* MAIN FEED SECTION */}
-      <section className="space-y-6">
+      <section className="space-y-6 min-w-0">
         {/* Header Banner */}
         <div className="border-b border-black/[.07] pb-5">
           <span className="inline-block text-[11px] font-bold text-amber-600 tracking-wider uppercase">SprintNP Community</span>
@@ -101,12 +46,12 @@ export function FeedList({ userRole }: { userRole?: string }) {
           </p>
 
           {/* Feed Filter Tabs */}
-          <div className="mt-6 flex gap-6 text-xs font-semibold border-b border-black/[0.04]">
+          <div className="mt-6 flex gap-6 text-xs font-semibold border-b border-black/[0.04] overflow-x-auto pb-0.5">
             {['For you', 'Following', 'Cricket', 'Trending', 'Latest'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`pb-3 transition relative ${
+                className={`pb-3 transition relative whitespace-nowrap ${
                   activeTab === tab
                     ? 'border-b-2 border-black text-black font-bold'
                     : 'text-neutral-400 hover:text-neutral-800'

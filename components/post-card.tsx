@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Award, Bookmark, Flame, MessageCircle, MoreHorizontal, Send, Share2 } from 'lucide-react';
-import { Post } from './post-creator';
+import { Post } from '@/lib/post-store';
 import { ShareModal } from './share-modal';
 
 interface PostCardProps {
@@ -25,10 +25,10 @@ export function PostCard({ post, isCoach = false }: PostCardProps) {
 
   const handleFireClick = () => {
     if (hasFired) {
-      setFireCount((prev) => Math.max(0, prev - 1));
+      setFireCount((prev: number) => Math.max(0, prev - 1));
       setHasFired(false);
     } else {
-      setFireCount((prev) => prev + 1);
+      setFireCount((prev: number) => prev + 1);
       setHasFired(true);
     }
   };
@@ -244,7 +244,7 @@ export function PostCard({ post, isCoach = false }: PostCardProps) {
         <div className="mt-4 pt-4 border-t border-black/[0.05] space-y-3">
           {comments.length > 0 ? (
             <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-              {comments.map((c) => (
+              {comments.map((c: { id: string; author: string; text: string; timeAgo: string }) => (
                 <div key={c.id} className="rounded-2xl bg-neutral-50 p-2.5 text-xs">
                   <div className="flex items-center justify-between">
                     <span className="font-bold text-neutral-900">{c.author}</span>

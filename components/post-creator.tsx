@@ -2,43 +2,12 @@
 
 import React, { useState, useRef } from 'react';
 import { X, Image as ImageIcon, BarChart3, Sparkles, UploadCloud } from 'lucide-react';
-
-export interface StatCardData {
-  score: string;
-  balls?: string;
-  strikeRate: string;
-  fours: string;
-  sixes: string;
-  dotBalls: string;
-  matchTitle: string;
-  matchResult: string;
-  tag: string;
-}
-
-export interface Post {
-  id: string;
-  authorName: string;
-  authorHandle: string;
-  authorAvatar?: string;
-  timeAgo: string;
-  location?: string;
-  caption: string;
-  imageUrl?: string;
-  hasStatCard: boolean;
-  statCard?: StatCardData;
-  fireCount: number;
-  hasFired: boolean;
-  commentsCount: number;
-  bookmarked: boolean;
-  comments: { id: string; author: string; text: string; timeAgo: string }[];
-  medals?: string[];
-  createdAt: string;
-}
+import { Post, savePost } from '@/lib/post-store';
 
 interface PostCreatorProps {
   isOpen: boolean;
   onClose: () => void;
-  onPostCreated: (post: Post) => void;
+  onPostCreated?: (post: Post) => void;
   userFullName?: string;
 }
 
@@ -81,19 +50,19 @@ export function PostCreatorModal({ isOpen, onClose, onPostCreated, userFullName 
       authorName: userFullName,
       authorHandle: `@${userFullName.toLowerCase().replace(/\s+/g, '')}`,
       timeAgo: 'Just now',
-      location: 'Local Match • Mumbai',
-      caption: caption || 'Great game today! 🏏',
+      location: 'Local Match • Cricket Field',
+      caption: caption || 'Great session today! 🏏',
       imageUrl: imagePreview || '/images/cricket-feed-poster.png',
       hasStatCard,
       statCard: hasStatCard ? {
-        score: `${score} (${balls})`,
-        strikeRate,
-        fours,
-        sixes,
-        dotBalls,
-        matchTitle,
-        matchResult,
-        tag
+        score: `${score}${balls ? ` (${balls})` : ''}`,
+        strikeRate: strikeRate || '150.0',
+        fours: fours || '0',
+        sixes: sixes || '0',
+        dotBalls: dotBalls || '0',
+        matchTitle: matchTitle || 'Match Day',
+        matchResult: matchResult || '',
+        tag: tag || 'Match'
       } : undefined,
       fireCount: 1,
       hasFired: true,
@@ -104,7 +73,11 @@ export function PostCreatorModal({ isOpen, onClose, onPostCreated, userFullName 
       createdAt: new Date().toISOString()
     };
 
-    onPostCreated(newPost);
+    savePost(newPost);
+    if (onPostCreated) {
+      onPostCreated(newPost);
+    }
+
     onClose();
 
     // Reset form
