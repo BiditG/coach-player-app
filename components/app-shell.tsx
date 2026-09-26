@@ -1,11 +1,209 @@
+'use client';
+
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { Activity, Bell, Compass, Film, Flame, LayoutDashboard, LogOut, Search, Shield, Upload } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import {
+  Bell,
+  Calendar,
+  Flame,
+  LogOut,
+  Plus,
+  Search,
+  Share2,
+  Shield,
+  Sparkles,
+  User,
+  Users,
+} from 'lucide-react';
 import { signOut } from '@/app/(login)/actions';
 import type { Profile } from '@/lib/types';
+import { PostCreatorModal, Post } from './post-creator';
+import { ShareModal } from './share-modal';
 
 export function AppShell({ profile, children }: { profile: Profile; children: React.ReactNode }) {
-  const base = [{ href: '/feed', label: 'Feed', icon: Flame }, { href: '/dashboard', label: 'Your space', icon: LayoutDashboard }, { href: '/explore', label: 'Explore coaches', icon: Compass }, { href: '/reviews', label: 'My reviews', icon: Activity }, { href: '/dashboard/videos', label: 'My videos', icon: Film }];
-  const links = profile.role === 'ADMIN' ? [{ href: '/admin', label: 'Admin', icon: Shield }, ...base] : profile.role === 'PROFESSIONAL' ? [{ href: '/professional', label: 'Coach dashboard', icon: Activity }, ...base] : base;
-  const initial = profile.full_name?.[0] || profile.email[0]?.toUpperCase();
-  return <div className="min-h-screen bg-[#f7f7f8] p-0 sm:p-2 md:p-3"><div className="mx-auto min-h-screen max-w-[1500px] bg-white sm:overflow-hidden sm:rounded-[26px] sm:border sm:border-black/[.06] sm:shadow-[0_18px_70px_rgba(0,0,0,.06)] md:flex"><aside className="hidden w-[92px] shrink-0 border-r border-black/[.06] py-5 md:flex md:flex-col md:items-center"><Link href="/feed" aria-label="Framewise feed" className="grid size-11 place-items-center rounded-2xl bg-black text-sm font-semibold text-white shadow-sm">F</Link><nav className="mt-12 flex flex-col gap-5">{links.map(({ href, label, icon: Icon }) => <Link key={href} href={href} title={label} aria-label={label} className="group relative grid size-12 place-items-center rounded-2xl text-neutral-400 transition duration-200 hover:bg-neutral-100 hover:text-black"><Icon size={23} strokeWidth={1.65}/><span className="pointer-events-none absolute left-[58px] z-20 hidden whitespace-nowrap rounded-lg bg-[#171719] px-2.5 py-1.5 text-[11px] font-medium text-white shadow-lg group-hover:block">{label}</span></Link>)}</nav><div className="mt-auto flex flex-col items-center gap-4"><Link href="/profile" title="Profile" className="grid size-10 place-items-center rounded-full bg-neutral-900 text-[11px] font-semibold text-white">{initial}</Link><form action={signOut}><button title="Sign out" aria-label="Sign out" className="grid size-11 place-items-center rounded-2xl text-neutral-400 transition hover:bg-neutral-100 hover:text-black"><LogOut size={20} strokeWidth={1.65}/></button></form></div></aside><main className="min-w-0 flex-1"><header className="flex h-16 items-center justify-between border-b border-black/[.055] px-5 sm:px-7"><Link href="/feed" className="grid size-8 place-items-center rounded-xl bg-black text-xs font-semibold text-white md:hidden">F</Link><div className="hidden w-full max-w-sm items-center gap-2 rounded-full bg-neutral-100 px-3 py-2 md:flex"><Search size={14} className="text-neutral-400"/><span className="text-xs text-neutral-400">Search videos, coaches, or skills...</span></div><div className="ml-auto flex items-center gap-4"><Bell size={17} strokeWidth={1.7} className="text-neutral-500"/><Link href="/dashboard/upload" className="rounded-full bg-[#171719] px-3.5 py-2 text-xs font-medium text-white"><Upload className="mr-1 inline size-3.5"/>Upload</Link><Link href="/profile" className="grid size-7 place-items-center rounded-full bg-neutral-900 text-[10px] font-semibold text-white">{initial}</Link></div></header><div className="mx-auto max-w-6xl px-5 py-7 pb-24 sm:px-8 md:py-10">{children}</div></main><nav className="fixed inset-x-3 bottom-3 z-20 flex justify-around rounded-2xl border border-black/[.07] bg-white/95 px-2 py-2 shadow-lg backdrop-blur md:hidden">{links.slice(0, 5).map(({ href, label, icon: Icon }) => <Link key={href} href={href} className="flex flex-col items-center gap-1 px-2 py-1 text-[9px] text-neutral-500"><Icon size={18} strokeWidth={1.6}/>{label}</Link>)}</nav></div></div>;
+  const pathname = usePathname();
+  const [isPostCreatorOpen, setIsPostCreatorOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
+  const navLinks = [
+    { href: '/feed', label: 'Feed', icon: Flame },
+    { href: '/coaches', label: 'Coaches', icon: Users },
+    { href: '/events', label: 'Events', icon: Calendar },
+    { href: '/ai-review', label: 'AI Review', icon: Sparkles },
+    { href: '/profile', label: 'Profile', icon: User },
+  ];
+
+  if (profile.role === 'ADMIN') {
+    navLinks.unshift({ href: '/admin', label: 'Admin', icon: Shield });
+  }
+
+  const initial = profile.full_name?.[0] || profile.email[0]?.toUpperCase() || 'S';
+
+  const handlePostCreated = (post: Post) => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('sprintnp:new-post', { detail: post }));
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#f7f7f8] p-0 sm:p-2 md:p-3">
+      <div className="mx-auto min-h-screen max-w-[1500px] bg-white sm:overflow-hidden sm:rounded-[26px] sm:border sm:border-black/[.06] sm:shadow-[0_18px_70px_rgba(0,0,0,.06)] md:flex">
+        {/* DESKTOP SIDEBAR */}
+        <aside className="hidden w-[220px] shrink-0 border-r border-black/[.06] p-5 md:flex md:flex-col justify-between bg-neutral-50/50">
+          <div>
+            {/* Logo */}
+            <Link href="/feed" aria-label="SprintNP Home" className="flex items-center gap-3 px-2 py-1">
+              <div className="grid size-10 place-items-center rounded-2xl bg-black font-extrabold text-white text-lg shadow-md tracking-tighter">
+                S
+              </div>
+              <div className="flex flex-col">
+                <span className="text-base font-extrabold tracking-tight text-neutral-900 leading-none">SprintNP</span>
+                <span className="text-[10px] font-semibold tracking-wider text-amber-600 uppercase mt-0.5">Cricket Social</span>
+              </div>
+            </Link>
+
+            {/* Navigation Links */}
+            <nav className="mt-8 space-y-1.5">
+              {navLinks.map(({ href, label, icon: Icon }) => {
+                const isActive = pathname === href || pathname.startsWith(href + '/');
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={`flex items-center gap-3.5 rounded-2xl px-3.5 py-3 text-xs font-semibold transition duration-200 ${
+                      isActive
+                        ? 'bg-black text-white shadow-md'
+                        : 'text-neutral-500 hover:bg-neutral-200/60 hover:text-black'
+                    }`}
+                  >
+                    <Icon size={18} strokeWidth={2} />
+                    <span>{label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+
+            {/* YOUR TOOLS Section (Only Create Post & Quick Share as requested) */}
+            <div className="mt-8 pt-6 border-t border-black/[0.06]">
+              <p className="px-3 text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-3">Your Tools</p>
+              
+              <button
+                onClick={() => setIsPostCreatorOpen(true)}
+                className="w-full flex items-center gap-3 rounded-2xl bg-neutral-900 px-3.5 py-3 text-xs font-semibold text-white shadow-md hover:bg-neutral-800 transition"
+              >
+                <Plus size={18} strokeWidth={2.5} className="text-amber-400" />
+                <span>Create Post</span>
+              </button>
+
+              <button
+                onClick={() => setIsShareModalOpen(true)}
+                aria-label="Share App"
+                className="w-full mt-2 flex items-center gap-3 rounded-2xl border border-black/[0.08] bg-white px-3.5 py-2.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 transition"
+              >
+                <Share2 size={16} className="text-neutral-500" />
+                <span>Share App</span>
+              </button>
+            </div>
+          </div>
+
+          {/* User Profile Footer */}
+          <div className="pt-4 border-t border-black/[0.06] flex items-center justify-between">
+            <Link href="/profile" className="flex items-center gap-3 min-w-0">
+              <div className="grid size-9 shrink-0 place-items-center rounded-full bg-neutral-900 text-xs font-bold text-white shadow-sm">
+                {initial}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold text-neutral-900 truncate">{profile.full_name || 'Player'}</p>
+                <p className="text-[10px] text-neutral-400 truncate">{profile.email}</p>
+              </div>
+            </Link>
+
+            <form action={signOut}>
+              <button title="Sign out" aria-label="Sign out" className="grid size-8 place-items-center rounded-full text-neutral-400 hover:bg-neutral-200 hover:text-black transition">
+                <LogOut size={16} />
+              </button>
+            </form>
+          </div>
+        </aside>
+
+        {/* MAIN CONTENT AREA */}
+        <main className="min-w-0 flex-1 flex flex-col">
+          {/* HEADER */}
+          <header className="flex h-16 items-center justify-between border-b border-black/[.055] px-5 sm:px-7 bg-white/80 backdrop-blur-md sticky top-0 z-20">
+            <Link href="/feed" className="flex items-center gap-2 md:hidden">
+              <div className="grid size-8 place-items-center rounded-xl bg-black text-xs font-bold text-white">S</div>
+              <span className="text-sm font-extrabold tracking-tight">SprintNP</span>
+            </Link>
+
+            {/* Search Bar */}
+            <div className="hidden w-full max-w-sm items-center gap-2.5 rounded-full bg-neutral-100 px-4 py-2 md:flex border border-black/[0.04] focus-within:bg-white focus-within:border-black/20 transition">
+              <Search size={15} className="text-neutral-400" />
+              <input
+                type="text"
+                placeholder="Search players, matches, or posts..."
+                className="w-full bg-transparent text-xs text-neutral-800 placeholder-neutral-400 outline-none"
+              />
+            </div>
+
+            {/* Top Bar Actions */}
+            <div className="ml-auto flex items-center gap-3">
+              <button
+                onClick={() => setIsPostCreatorOpen(true)}
+                className="rounded-full bg-black px-4 py-2 text-xs font-semibold text-white shadow-md hover:bg-neutral-800 transition flex items-center gap-1.5"
+              >
+                <Plus size={15} className="text-amber-400" />
+                <span className="hidden sm:inline">Create Post</span>
+              </button>
+
+              <button className="grid size-9 place-items-center rounded-full text-neutral-500 hover:bg-neutral-100 transition" aria-label="Notifications">
+                <Bell size={18} strokeWidth={1.7} />
+              </button>
+
+              <Link href="/profile" className="grid size-8 place-items-center rounded-full bg-neutral-900 text-xs font-bold text-white shadow-sm" aria-label="Profile">
+                {initial}
+              </Link>
+            </div>
+          </header>
+
+          {/* Page Content */}
+          <div className="mx-auto w-full max-w-6xl px-4 py-6 pb-24 sm:px-7 md:py-8 flex-1">
+            {children}
+          </div>
+        </main>
+
+        {/* MOBILE NAVIGATION BAR */}
+        <nav className="fixed inset-x-3 bottom-3 z-30 flex justify-around rounded-2xl border border-black/[.08] bg-white/95 px-2 py-2.5 shadow-xl backdrop-blur-lg md:hidden">
+          {navLinks.map(({ href, label, icon: Icon }) => {
+            const isActive = pathname === href;
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={`flex flex-col items-center gap-1 px-3 py-1 text-[10px] font-semibold transition ${
+                  isActive ? 'text-black font-bold' : 'text-neutral-400'
+                }`}
+              >
+                <Icon size={19} strokeWidth={isActive ? 2.2 : 1.6} />
+                <span>{label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* Modals */}
+      <PostCreatorModal
+        isOpen={isPostCreatorOpen}
+        onClose={() => setIsPostCreatorOpen(false)}
+        onPostCreated={handlePostCreated}
+        userFullName={profile.full_name || 'Player'}
+      />
+
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+      />
+    </div>
+  );
 }
