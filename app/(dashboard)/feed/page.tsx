@@ -29,6 +29,7 @@ export default async function FeedPage({
       view={view}
       isRemote={available}
       isCoach={profile.role === 'PROFESSIONAL' || profile.role === 'ADMIN'}
+      author={{ id: profile.id, name: profile.full_name || profile.email || 'Player' }}
     />
   );
 }

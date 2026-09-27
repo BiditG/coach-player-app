@@ -38,6 +38,9 @@ export interface FeedComment {
   createdAt: string;
 }
 
+/** Raw player inputs for either role. */
+export type StatInputs = BattingInput | BowlingInput;
+
 export interface FeedPost {
   id: string;
   author: FeedAuthor;
@@ -48,7 +51,7 @@ export interface FeedPost {
   matchTitle: string;
   matchResult: string;
   /** Raw inputs. The single source of truth for every derived number. */
-  inputs: BattingInput | BowlingInput | null;
+  inputs: StatInputs | null;
   /** Computed from `inputs` on every read. */
   stats: DerivedStats | null;
   fireCount: number;
@@ -201,19 +204,168 @@ export function mapPostRow(row: PostRow): FeedPost {
 export const LOCAL_FEED_KEY = 'sprintnp_feed_v1';
 export const LOCAL_FEED_CHANGED_EVENT = 'sprintnp:feed-changed';
 
+/** The key the retired localStorage post store used. Read once, then migrated. */
+const LEGACY_FEED_KEY = 'sprintnp_posts_v2';
+
 export const EMPTY_LOCAL_POSTS: FeedPost[] = [];
+
+/** Best-effort integer from an unknown form value. */
+function legacyCount(value: unknown): number {
+  const parsed = typeof value === 'number' ? value : Number.parseInt(String(value ?? ''), 10);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+/**
+ * Parse the retired store's formatted `score` back into raw inputs.
+ *
+ * Batting was stored as "78 (52)" and bowling as "4/18 (4.0)".
+ */
+function legacyInputs(
+  card: Record<string, unknown> | null,
+  isBowling: boolean,
+): { role: PlayerRole | null; inputs: StatInputs | null } {
+  if (!card) return { role: null, inputs: null };
+
+  const score = typeof card.score === 'string' ? card.score : '';
+  const dotBalls = legacyCount(card.dotBalls);
+
+  if (isBowling) {
+    const bowling = score.match(/^(\d+)\/(\d+)\s*\((\d+(?:\.\d+)?)\)/);
+
+    return {
+      role: 'BOWLER',
+      inputs: {
+        wickets: bowling ? Number(bowling[1]) : 0,
+        runsConceded: bowling ? Number(bowling[2]) : 0,
+        overs: bowling ? bowling[3] : '0',
+        maidenOvers: 0,
+        dotBalls,
+        wides: 0,
+        noBalls: 0,
+      },
+    };
+  }
+
+  const batting = score.match(/^(\d+)\s*\((\d+)\)/);
+
+  return {
+    role: 'BATSMAN',
+    inputs: {
+      runs: batting ? Number(batting[1]) : 0,
+      balls: batting ? Number(batting[2]) : 0,
+      fours: legacyCount(card.fours),
+      sixes: legacyCount(card.sixes),
+      dotBalls,
+    },
+  };
+}
+
+function legacyComments(value: unknown, createdAt: string) {
+  if (!Array.isArray(value)) return [];
+
+  return (value as Record<string, unknown>[])
+    .filter((comment) => comment && typeof comment.text === 'string')
+    .map((comment) => ({
+      id: String(comment.id ?? `legacy-${createdAt}`),
+      authorName: typeof comment.author === 'string' ? comment.author : 'Player',
+      body: String(comment.text),
+      createdAt,
+    }));
+}
+
+/**
+ * Rebuild a post saved by the retired store into the current shape.
+ *
+ * The old store persisted *pre-computed* rates and a formatted `score` string.
+ * The current model derives every rate from raw inputs, so the score is parsed
+ * back into inputs here and the numbers are re-derived rather than trusted.
+ */
+function migrateLegacyPost(raw: unknown): FeedPost | null {
+  if (typeof raw !== 'object' || raw === null) return null;
+
+  const old = raw as Record<string, unknown>;
+  const id = typeof old.id === 'string' ? old.id : '';
+  if (!id) return null;
+
+  const card = (old.statCard ?? null) as Record<string, unknown> | null;
+  const { role, inputs } = legacyInputs(card, card?.tag === 'Bowling');
+
+  const name = typeof old.authorName === 'string' ? old.authorName : 'Player';
+  const createdAt = typeof old.createdAt === 'string' ? old.createdAt : new Date().toISOString();
+  const comments = legacyComments(old.comments, createdAt);
+
+  return {
+    id,
+    author: {
+      id: `legacy-${id}`,
+      name,
+      handle: typeof old.authorHandle === 'string' ? old.authorHandle : handleFromName(name),
+      avatarUrl: typeof old.authorAvatar === 'string' ? old.authorAvatar : null,
+    },
+    kind: old.hasStatCard === false && old.imageUrl ? 'IMAGE' : 'STAT_CARD',
+    role,
+    caption: typeof old.caption === 'string' ? old.caption : '',
+    imageUrl: typeof old.imageUrl === 'string' ? old.imageUrl : null,
+    matchTitle: typeof card?.matchTitle === 'string' ? card.matchTitle : '',
+    matchResult: typeof card?.matchResult === 'string' ? card.matchResult : '',
+    inputs,
+    stats: inputs && role ? deriveStats(role, inputs) : null,
+    fireCount: typeof old.fireCount === 'number' ? old.fireCount : 0,
+    hasFired: old.hasFired === true,
+    commentCount: typeof old.commentsCount === 'number' ? old.commentsCount : comments.length,
+    bookmarked: old.bookmarked === true,
+    comments,
+    medals: Array.isArray(old.medals) ? (old.medals as string[]).map(medalLabel) : [],
+    createdAt,
+  };
+}
+
+/**
+ * One-time rescue of posts written by the retired store.
+ *
+ * The old and new stores used different localStorage keys, so without this
+ * every post the player had already made would silently vanish the moment the
+ * new feed shipped. Runs at most once; the legacy key is left in place rather
+ * than deleted so nothing is destroyed if the mapping is ever wrong.
+ */
+function rescueLegacyPosts(current: FeedPost[]): FeedPost[] {
+  if (current.length > 0 || typeof window === 'undefined') return current;
+
+  try {
+    const raw = window.localStorage.getItem(LEGACY_FEED_KEY);
+    if (!raw) return current;
+
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return current;
+
+    const migrated = parsed
+      .map(migrateLegacyPost)
+      .filter((post): post is FeedPost => post !== null);
+
+    if (migrated.length > 0) {
+      writeLocalPosts(migrated);
+    }
+
+    return migrated;
+  } catch {
+    return current;
+  }
+}
 
 function readLocalPosts(): FeedPost[] {
   if (typeof window === 'undefined') return EMPTY_LOCAL_POSTS;
 
   try {
     const raw = window.localStorage.getItem(LOCAL_FEED_KEY);
-    if (!raw) return EMPTY_LOCAL_POSTS;
-    const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as FeedPost[]) : EMPTY_LOCAL_POSTS;
+    if (raw) {
+      const parsed: unknown = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed as FeedPost[];
+    }
   } catch {
-    return EMPTY_LOCAL_POSTS;
+    // Fall through to the legacy rescue below.
   }
+
+  return rescueLegacyPosts(EMPTY_LOCAL_POSTS);
 }
 
 function writeLocalPosts(posts: FeedPost[]): void {

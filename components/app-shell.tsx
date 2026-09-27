@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -19,6 +19,7 @@ import {
 import { signOut } from '@/app/(login)/actions';
 import type { Profile } from '@/lib/types';
 import { PostComposer } from '@/components/feed/post-composer';
+import { OPEN_COMPOSER_EVENT } from '@/components/feed/feed-list';
 import { ShareModal } from '@/components/share-modal';
 import { cn } from '@/lib/utils';
 
@@ -39,6 +40,14 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
     profile.role === 'ADMIN'
       ? [{ href: '/admin', label: 'Admin', icon: Shield }, ...NAV_LINKS]
       : NAV_LINKS;
+
+  // The feed's inline prompt opens the composer, which lives here so the
+  // header button and the prompt stay one modal rather than two.
+  useEffect(() => {
+    const open = () => setIsComposerOpen(true);
+    window.addEventListener(OPEN_COMPOSER_EVENT, open);
+    return () => window.removeEventListener(OPEN_COMPOSER_EVENT, open);
+  }, []);
 
   const initial = profile.full_name?.[0] || profile.email[0]?.toUpperCase() || 'S';
 
