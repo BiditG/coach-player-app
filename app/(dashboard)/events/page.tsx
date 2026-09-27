@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Calendar, MapPin, Plus, ShieldCheck, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import Image from 'next/image';
+import { Calendar, MapPin, Plus, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
 import { CricketEvent, EventSubmitModal } from '@/components/event-submit-modal';
 
 const MOCK_EVENTS: CricketEvent[] = [
@@ -102,9 +103,11 @@ export default function EventsPage() {
           >
             {/* Image Banner */}
             <div className="relative aspect-video w-full overflow-hidden bg-neutral-900">
-              <img
+              <Image
                 src={evt.bannerUrl}
                 alt={evt.title}
+                fill
+                sizes="(min-width: 768px) 50vw, 100vw"
                 className="size-full object-cover transition duration-300 group-hover:scale-105"
               />
               <div className="absolute top-4 left-4 flex gap-2">

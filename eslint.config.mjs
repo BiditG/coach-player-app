@@ -3,7 +3,9 @@ import sonarjs from 'eslint-plugin-sonarjs';
 
 const eslintConfig = [
   {
-    ignores: ['coverage/', 'coverage/**'],
+    // `.kilo/worktrees` holds a stale duplicate checkout of this repo. It is not
+    // source and must not be linted, type-checked or committed.
+    ignores: ['coverage/', 'coverage/**', '.kilo/**'],
   },
   ...nextConfig,
   sonarjs.configs.recommended,

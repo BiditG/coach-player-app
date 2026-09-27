@@ -2,12 +2,13 @@ import './globals.css';
 import type { Metadata, Viewport } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Framewise — Video feedback, made clear',
-  description: 'AI and professional video analysis.'
+  title: 'SprintNP — Cricket Social Network',
+  description: 'Share stat cards, get recognised by coaches, and track your cricket.',
 };
 
 export const viewport: Viewport = {
-  maximumScale: 1
+  themeColor: '#f5f5f7',
+  colorScheme: 'light',
 };
 
 export default function RootLayout({
@@ -16,11 +17,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html
-      lang="en"
-      className="bg-[#f5f5f7] text-[#1d1d1f]"
-    >
-      <body className="min-h-[100dvh] bg-[#f5f5f7]">{children}</body>
+    <html lang="en" className="bg-canvas text-ink antialiased">
+      <body className="min-h-[100dvh] bg-canvas text-ink">{children}</body>
     </html>
   );
 }

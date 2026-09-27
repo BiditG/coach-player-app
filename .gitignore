@@ -45,6 +45,9 @@ test-results/
 # claude code local settings
 .claude/settings.local.json
 
+# stale duplicate checkouts of this repo created by tooling
+.kilo/
+
 # improvement loop — ephemeral capture data
 .learnings/queue.jsonl
 .learnings/.queue.lock

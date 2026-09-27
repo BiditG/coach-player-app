@@ -1,2 +1,89 @@
-import { notFound } from 'next/navigation';import { requireUser } from '@/lib/auth';import { createClient } from '@/lib/supabase/server';import { StatusBadge } from '@/components/status-badge';
-export default async function Detail({params}:{params:Promise<{id:string}>}){const p=await requireUser();const s=await createClient();const {id}=await params;const {data:order}=await s.from('analysis_orders').select('*,videos(original_filename),analyses(*)').eq('id',id).eq('user_id',p.id).single();if(!order)notFound();const analysis=Array.isArray(order.analyses)?order.analyses[0]:order.analyses;return <><p className="eyebrow">Analysis report</p><div className="mt-2 flex flex-wrap items-center gap-3"><h1 className="page-title">{order.title}</h1><StatusBadge status={order.status}/></div><p className="mt-3 text-neutral-500">{order.videos?.original_filename} · {order.analysis_type === 'AI'?'AI Analysis':'Professional Analysis'}</p>{order.status!=='COMPLETED'||!analysis?<div className="surface mt-8 p-8"><div className="size-8 animate-pulse rounded-full bg-neutral-200"/><h2 className="mt-6 text-xl font-semibold">Your analysis is in progress</h2><p className="mt-2 text-neutral-500">We’ll notify you as soon as your report is ready.</p></div>:<div className="mt-8 grid gap-5 lg:grid-cols-3"><div className="surface p-7 lg:col-span-2"><p className="eyebrow">Summary</p><h2 className="mt-4 text-2xl font-semibold tracking-tight">{analysis.summary}</h2><section className="mt-10"><h3 className="font-semibold">Strengths</h3><ul className="mt-3 space-y-2 text-sm leading-6 text-neutral-600">{analysis.strengths?.map((x:string)=><li key={x}>• {x}</li>)}</ul></section><section className="mt-8"><h3 className="font-semibold">Areas to improve</h3><ul className="mt-3 space-y-2 text-sm leading-6 text-neutral-600">{analysis.improvements?.map((x:string)=><li key={x}>• {x}</li>)}</ul></section></div><div className="surface p-7"><p className="eyebrow">Overall score</p><p className="mt-5 text-6xl font-semibold tracking-[-.06em]">{analysis.overall_score ?? '—'}</p><p className="mt-2 text-sm text-neutral-500">out of 10</p></div></div>}</>}
+import { notFound } from 'next/navigation';
+import { requireUser } from '@/lib/auth';
+import { createClient } from '@/lib/supabase/server';
+import { StatusBadge } from '@/components/status-badge';
+
+type AnalysisDetailProps = { params: Promise<{ id: string }> };
+
+type AnalysisRow = {
+  summary: string | null;
+  overall_score: number | null;
+  strengths: string[] | null;
+  improvements: string[] | null;
+};
+
+export default async function Detail({ params }: AnalysisDetailProps) {
+  const profile = await requireUser();
+  const supabase = await createClient();
+  const { id } = await params;
+
+  const { data: order } = await supabase
+    .from('analysis_orders')
+    .select('*,videos(original_filename),analyses(*)')
+    .eq('id', id)
+    .eq('user_id', profile.id)
+    .single();
+
+  if (!order) notFound();
+
+  const analysis = (Array.isArray(order.analyses) ? order.analyses[0] : order.analyses) as
+    | AnalysisRow
+    | null;
+
+  const label = order.analysis_type === 'AI' ? 'AI Analysis' : 'Professional Analysis';
+  const isPending = order.status !== 'COMPLETED' || !analysis;
+
+  return (
+    <>
+      <p className="eyebrow">Analysis report</p>
+      <div className="mt-2 flex flex-wrap items-center gap-3">
+        <h1 className="page-title">{order.title}</h1>
+        <StatusBadge status={order.status} />
+      </div>
+      <p className="mt-3 text-neutral-500">
+        {order.videos?.original_filename} — {label}
+      </p>
+
+      {isPending ? (
+        <div className="surface mt-8 p-8">
+          <div className="size-8 animate-pulse rounded-full bg-neutral-200" />
+          <h2 className="mt-6 text-xl font-semibold">Your analysis is in progress</h2>
+          <p className="mt-2 text-neutral-500">We&apos;ll notify you as soon as your report is ready.</p>
+        </div>
+      ) : (
+        <div className="mt-8 grid gap-5 lg:grid-cols-3">
+          <div className="surface p-7 lg:col-span-2">
+            <p className="eyebrow">Summary</p>
+            <h2 className="mt-4 text-2xl font-semibold tracking-tight">{analysis.summary}</h2>
+
+            <section className="mt-10">
+              <h3 className="font-semibold">Strengths</h3>
+              <ul className="mt-3 space-y-2 text-sm leading-6 text-neutral-600">
+                {analysis.strengths?.map((item: string) => (
+                  <li key={item}>— {item}</li>
+                ))}
+              </ul>
+            </section>
+
+            <section className="mt-8">
+              <h3 className="font-semibold">Areas to improve</h3>
+              <ul className="mt-3 space-y-2 text-sm leading-6 text-neutral-600">
+                {analysis.improvements?.map((item: string) => (
+                  <li key={item}>— {item}</li>
+                ))}
+              </ul>
+            </section>
+          </div>
+
+          <div className="surface p-7">
+            <p className="eyebrow">Overall score</p>
+            <p className="mt-5 text-6xl font-semibold tracking-[-.06em] tabular">
+              {analysis.overall_score ?? '—'}
+            </p>
+            <p className="mt-2 text-sm text-neutral-500">out of 10</p>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

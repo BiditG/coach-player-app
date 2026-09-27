@@ -4,30 +4,84 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+import { writePreviewIdentity } from '@/lib/preview-auth';
 
 export default function SignupPage() {
   const [email, setEmail] = useState('test1@sprintnp.app');
   const [password, setPassword] = useState('password123');
   const [name, setName] = useState('Test Player 1');
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [isPending, setIsPending] = useState(false);
   const router = useRouter();
 
-  function loginAs(profile: { id: string; email: string; full_name: string; role: string }) {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('sprintnp_current_user', JSON.stringify(profile));
-      document.cookie = `sprintnp_user=${encodeURIComponent(JSON.stringify(profile))}; path=/; max-age=31536000`;
+  async function handleSignup(e: React.FormEvent) {
+    e.preventDefault();
+
+    const address = email || 'test1@sprintnp.app';
+    const fullName = name || address.split('@')[0] || 'Test Player 1';
+
+    setError(null);
+    setNotice(null);
+    setIsPending(true);
+
+    const supabase = createClient();
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email: address,
+      password,
+      options: { data: { full_name: fullName } },
+    });
+
+    if (signUpError) {
+      // Never block on Supabase availability - the preview identity keeps the
+      // local demo flow working.
+      setError(`${signUpError.message} Continuing in preview mode.`);
+      setIsPending(false);
+      writePreviewIdentity({
+        id: `preview-${address}`,
+        email: address,
+        full_name: fullName,
+        role: 'USER',
+      });
+      router.push('/feed');
+      router.refresh();
+      return;
     }
-    router.push('/feed');
-    router.refresh();
+
+    const userId = data.user?.id;
+    if (!userId) {
+      setIsPending(false);
+      setError('Could not start a session. Try signing in instead.');
+      return;
+    }
+
+    if (data.session) {
+      setIsPending(false);
+      writePreviewIdentity({ id: userId, email: address, full_name: fullName, role: 'USER' });
+      router.push('/feed');
+      router.refresh();
+      return;
+    }
+
+    // No session yet: the project requires email confirmation. Sign in if the
+    // account already exists, otherwise tell the player to confirm.
+    setIsPending(false);
+    setNotice('Account created. Check your inbox to confirm, then sign in.');
+
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email: address, password });
+
+    if (!signInError) {
+      writePreviewIdentity({ id: userId, email: address, full_name: fullName, role: 'USER' });
+      router.push('/feed');
+      router.refresh();
+    }
   }
 
-  function handleSignup(e: React.FormEvent) {
-    e.preventDefault();
-    loginAs({
-      id: `user-${Date.now()}`,
-      email: email || 'test1@sprintnp.app',
-      full_name: name || email.split('@')[0] || 'Test Player 1',
-      role: 'USER',
-    });
+  function enterAsInstantAccount(profile: { id: string; email: string; full_name: string; role: string }) {
+    writePreviewIdentity(profile);
+    router.push('/feed');
+    router.refresh();
   }
 
   return (
@@ -53,7 +107,7 @@ export default function SignupPage() {
             <button
               type="button"
               onClick={() =>
-                loginAs({
+                enterAsInstantAccount({
                   id: 'test1-id',
                   email: 'test1@sprintnp.app',
                   full_name: 'test1 (Player)',
@@ -72,7 +126,7 @@ export default function SignupPage() {
             <button
               type="button"
               onClick={() =>
-                loginAs({
+                enterAsInstantAccount({
                   id: 'test2-id',
                   email: 'test2@sprintnp.app',
                   full_name: 'test2 (Coach)',
@@ -135,10 +189,23 @@ export default function SignupPage() {
 
           <button
             type="submit"
-            className="w-full rounded-full bg-black py-3 text-xs font-bold text-white hover:bg-neutral-800 transition shadow-md mt-2"
+            disabled={isPending}
+            className="w-full rounded-full bg-black py-3 text-xs font-bold text-white hover:bg-neutral-800 transition shadow-md mt-2 disabled:opacity-60"
           >
-            Create Account & Enter App
+            {isPending ? 'Creating account…' : 'Create Account & Enter App'}
           </button>
+
+          {error && (
+            <p role="status" className="rounded-2xl bg-amber-50 px-4 py-2.5 text-[11px] font-medium text-amber-900">
+              {error}
+            </p>
+          )}
+
+          {notice && (
+            <p role="status" className="rounded-2xl bg-neutral-100 px-4 py-2.5 text-[11px] font-medium text-neutral-700">
+              {notice}
+            </p>
+          )}
         </form>
 
         <p className="mt-6 text-center text-xs text-neutral-400">

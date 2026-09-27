@@ -1,2 +1,81 @@
-import { notFound } from 'next/navigation'; import { requireUser } from '@/lib/auth'; import { createClient } from '@/lib/supabase/server'; import { sendMessage } from '../actions';
-export default async function Conversation({params}:{params:Promise<{id:string}>}){const user=await requireUser();const {id}=await params;const supabase=await createClient();const [{data:participant},{data:messages}]=await Promise.all([supabase.from('conversation_participants').select('conversation_id').eq('conversation_id',id).eq('user_id',user.id).maybeSingle(),supabase.from('messages').select('id,sender_id,kind,body,created_at').eq('conversation_id',id).order('created_at')]);if(!participant)notFound();return <div className="surface flex min-h-[680px] flex-col overflow-hidden"><header className="border-b border-black/[.06] px-6 py-5"><p className="text-[13px] font-semibold">Conversation</p><p className="mt-1 text-[11px] text-neutral-500">Private and order-linked</p></header><div className="flex-1 space-y-3 p-5">{messages?.map(message=><div key={message.id} className={message.sender_id===user.id?'ml-auto max-w-[78%] rounded-2xl bg-black px-4 py-3 text-[12px] text-white':'max-w-[78%] rounded-2xl bg-neutral-100 px-4 py-3 text-[12px] text-neutral-700'}>{message.body}<p className="mt-1 text-[9px] opacity-60">{new Date(message.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</p></div>)}</div><form action={sendMessage} className="flex gap-2 border-t border-black/[.06] p-4"><input type="hidden" name="conversation_id" value={id}/><textarea name="body" required placeholder="Write a message…" className="min-h-11 flex-1 resize-none rounded-xl bg-neutral-100 px-4 py-3 text-[12px] outline-none"/><button className="primary-button">Send</button></form></div>}
+import { notFound } from 'next/navigation';
+import { requireUser } from '@/lib/auth';
+import { createClient } from '@/lib/supabase/server';
+import { sendMessage } from '../actions';
+
+type MessageRow = {
+  id: string;
+  sender_id: string;
+  kind: string;
+  body: string | null;
+  created_at: string;
+};
+
+export default async function Conversation({ params }: { params: Promise<{ id: string }> }) {
+  const user = await requireUser();
+  const { id } = await params;
+  const supabase = await createClient();
+
+  const [{ data: participant }, { data: messages }] = await Promise.all([
+    supabase
+      .from('conversation_participants')
+      .select('conversation_id')
+      .eq('conversation_id', id)
+      .eq('user_id', user.id)
+      .maybeSingle(),
+    supabase
+      .from('messages')
+      .select('id,sender_id,kind,body,created_at')
+      .eq('conversation_id', id)
+      .order('created_at'),
+  ]);
+
+  if (!participant) notFound();
+
+  const rows = (messages ?? []) as MessageRow[];
+
+  return (
+    <div className="surface flex min-h-[680px] flex-col overflow-hidden">
+      <header className="border-b border-hairline px-6 py-5">
+        <p className="text-[13px] font-semibold">Conversation</p>
+        <p className="mt-1 text-[11px] text-neutral-500">Private and order-linked</p>
+      </header>
+
+      <div className="flex-1 space-y-3 p-5">
+        {rows.map((message) => {
+          const isMine = message.sender_id === user.id;
+
+          return (
+            <div
+              key={message.id}
+              className={
+                isMine
+                  ? 'ml-auto max-w-[78%] rounded-2xl bg-black px-4 py-3 text-[12px] text-white'
+                  : 'max-w-[78%] rounded-2xl bg-neutral-100 px-4 py-3 text-[12px] text-neutral-700'
+              }
+            >
+              {message.body}
+              <p className="mt-1 text-[9px] opacity-60">
+                {new Date(message.created_at).toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+
+      <form action={sendMessage} className="flex gap-2 border-t border-hairline p-4">
+        <input type="hidden" name="conversation_id" value={id} />
+        <textarea
+          name="body"
+          required
+          placeholder="Write a message..."
+          className="min-h-11 flex-1 resize-none rounded-xl bg-neutral-100 px-4 py-3 text-[12px] outline-none"
+        />
+        <button className="primary-button">Send</button>
+      </form>
+    </div>
+  );
+}

@@ -3,31 +3,84 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { UserCheck, Sparkles, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+import { writePreviewIdentity } from '@/lib/preview-auth';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('test1@sprintnp.app');
   const [password, setPassword] = useState('password123');
   const [name, setName] = useState('Test Player 1');
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, setIsPending] = useState(false);
   const router = useRouter();
 
-  function loginAs(profile: { id: string; email: string; full_name: string; role: string }) {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('sprintnp_current_user', JSON.stringify(profile));
-      document.cookie = `sprintnp_user=${encodeURIComponent(JSON.stringify(profile))}; path=/; max-age=31536000`;
+  async function signInToSupabase(address: string, secret: string, fallbackName: string) {
+    const supabase = createClient();
+    const { data, error: signInError } = await supabase.auth.signInWithPassword({
+      email: address,
+      password: secret,
+    });
+
+    if (signInError || !data.user) {
+      return { ok: false as const, message: signInError?.message ?? 'Unable to sign in.' };
     }
+
+    // A Supabase session is now the source of truth, so the preview cookie is
+    // only a convenience for the local demo accounts.
+    writePreviewIdentity({
+      id: data.user.id,
+      email: data.user.email ?? address,
+      full_name: fallbackName,
+      role: 'USER',
+    });
+
+    return { ok: true as const, message: null };
+  }
+
+  async function loginAs(profile: { id: string; email: string; full_name: string; role: string }) {
+    setError(null);
+    setIsPending(true);
+
+    const result = await signInToSupabase(profile.email, password, profile.full_name);
+
+    if (!result.ok) {
+      // Local demo accounts are not Supabase users, so fall back to the preview
+      // identity rather than blocking sign-in.
+      setError(`${result.message} Continuing in preview mode.`);
+    }
+
+    writePreviewIdentity(profile);
+    setIsPending(false);
     router.push('/feed');
     router.refresh();
   }
 
-  function handleLogin(e: React.FormEvent) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    loginAs({
-      id: `user-${Date.now()}`,
-      email: email || 'test1@sprintnp.app',
-      full_name: name || email.split('@')[0] || 'Test Player 1',
+    const address = email || 'test1@sprintnp.app';
+
+    setError(null);
+    setIsPending(true);
+
+    const result = await signInToSupabase(address, password, name || address.split('@')[0]);
+    setIsPending(false);
+
+    if (result.ok) {
+      router.push('/feed');
+      router.refresh();
+      return;
+    }
+
+    setError(`${result.message} Continuing in preview mode.`);
+    writePreviewIdentity({
+      id: `preview-${address}`,
+      email: address,
+      full_name: name || address.split('@')[0] || 'Test Player 1',
       role: 'USER',
     });
+    router.push('/feed');
+    router.refresh();
   }
 
   return (
@@ -134,10 +187,17 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            className="w-full rounded-full bg-black py-3 text-xs font-bold text-white hover:bg-neutral-800 transition shadow-md mt-2"
+            disabled={isPending}
+            className="w-full rounded-full bg-black py-3 text-xs font-bold text-white hover:bg-neutral-800 transition shadow-md mt-2 disabled:opacity-60"
           >
-            Sign In & Enter App
+            {isPending ? 'Signing in…' : 'Sign In & Enter App'}
           </button>
+
+          {error && (
+            <p role="status" className="rounded-2xl bg-amber-50 px-4 py-2.5 text-[11px] font-medium text-amber-900">
+              {error}
+            </p>
+          )}
         </form>
 
         <p className="mt-6 text-center text-xs text-neutral-400">

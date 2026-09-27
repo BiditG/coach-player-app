@@ -1,2 +1,60 @@
-import Link from 'next/link'; import { MessageCircle } from 'lucide-react'; import { notFound } from 'next/navigation'; import { requireUser } from '@/lib/auth'; import { createClient } from '@/lib/supabase/server';
-export default async function OrderPage({params}:{params:Promise<{id:string}>}){const user=await requireUser();const {id}=await params;const supabase=await createClient();const {data:order}=await supabase.from('orders').select('*,professional_services(gig_title,display_name),service_packages(name,description),conversations(id)').eq('id',id).eq('buyer_id',user.id).single();if(!order)notFound();const conversation=(order.conversations as unknown as {id:string}[]|null)?.[0];return <><p className="eyebrow">Order</p><h1 className="page-title mt-2">{order.professional_services?.gig_title||'Coaching order'}</h1><div className="surface mt-8 p-6"><div className="flex items-center justify-between"><div><p className="text-[13px] font-semibold">{order.professional_services?.display_name||'Coach'}</p><p className="mt-1 text-[12px] text-neutral-500">{order.service_packages?.name||'Custom'} package · ${(order.total_cents/100).toFixed(2)}</p></div><span className="rounded-full bg-neutral-100 px-3 py-1 text-[10px] font-semibold">{order.status.replace('_',' ')}</span></div><div className="mt-6 border-t border-black/[.06] pt-5"><p className="text-[12px] font-semibold">Requirements</p><p className="mt-2 text-[12px] leading-6 text-neutral-500">{order.requirements||'No additional requirements provided.'}</p></div>{conversation&&<Link href={`/messages/${conversation.id}`} className="primary-button mt-6"><MessageCircle className="mr-1.5 size-3.5"/>Message coach</Link>}</div></>}
+import Link from 'next/link';
+import { MessageCircle } from 'lucide-react';
+import { notFound } from 'next/navigation';
+import { requireUser } from '@/lib/auth';
+import { createClient } from '@/lib/supabase/server';
+
+type OrderPageProps = { params: Promise<{ id: string }> };
+
+export default async function OrderPage({ params }: OrderPageProps) {
+  const user = await requireUser();
+  const { id } = await params;
+  const supabase = await createClient();
+
+  const { data: order } = await supabase
+    .from('orders')
+    .select('*,professional_services(gig_title,display_name),service_packages(name,description),conversations(id)')
+    .eq('id', id)
+    .eq('buyer_id', user.id)
+    .single();
+
+  if (!order) notFound();
+
+  const conversation = (order.conversations as unknown as { id: string }[] | null)?.[0];
+
+  return (
+    <>
+      <p className="eyebrow">Order</p>
+      <h1 className="page-title mt-2">{order.professional_services?.gig_title || 'Coaching order'}</h1>
+
+      <div className="surface mt-8 p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[13px] font-semibold">{order.professional_services?.display_name || 'Coach'}</p>
+            <p className="mt-1 text-[12px] text-neutral-500">
+              {order.service_packages?.name || 'Custom'} package — ${(order.total_cents / 100).toFixed(2)}
+            </p>
+          </div>
+
+          <span className="rounded-full bg-neutral-100 px-3 py-1 text-[10px] font-semibold">
+            {order.status.replace('_', ' ')}
+          </span>
+        </div>
+
+        <div className="mt-6 border-t border-hairline pt-5">
+          <p className="text-[12px] font-semibold">Requirements</p>
+          <p className="mt-2 text-[12px] leading-6 text-neutral-500">
+            {order.requirements || 'No additional requirements provided.'}
+          </p>
+        </div>
+
+        {conversation && (
+          <Link href={`/messages/${conversation.id}`} className="primary-button mt-6">
+            <MessageCircle className="mr-1.5 size-3.5" />
+            Message coach
+          </Link>
+        )}
+      </div>
+    </>
+  );
+}

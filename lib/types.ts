@@ -1,4 +1,19 @@
 export type AppRole = 'USER' | 'PROFESSIONAL' | 'ADMIN';
+
+/**
+ * Where a resolved identity came from. A `supabase` identity is backed by a
+ * validated session cookie and a real `auth.users` row; a `preview` identity
+ * comes from the unsigned local demo cookie and must never be trusted for
+ * privileged writes.
+ */
+export type IdentitySource = 'supabase' | 'preview';
+
+export interface SessionIdentity {
+  profile: Profile;
+  source: IdentitySource;
+  /** True only for a Supabase-validated session. */
+  isAuthenticated: boolean;
+}
 export type AnalysisType = 'AI' | 'PROFESSIONAL';
 export type OrderStatus = 'DRAFT' | 'SUBMITTED' | 'QUEUED' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
 export interface Profile { id: string; email: string; full_name: string | null; avatar_url: string | null; role: AppRole; }

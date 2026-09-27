@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Calendar, MapPin, Building, DollarSign, UploadCloud, CheckCircle2 } from 'lucide-react';
+import { X, Calendar, MapPin, Building, DollarSign, CheckCircle2 } from 'lucide-react';
 
 export interface CricketEvent {
   id: string;
@@ -29,7 +29,7 @@ export function EventSubmitModal({ isOpen, onClose, onEventSubmitted }: EventSub
   const [organizer, setOrganizer] = useState('');
   const [category, setCategory] = useState('Trials');
   const [date, setDate] = useState('');
-  const [time, setTime] = useState('');
+  const [time] = useState('');
   const [venue, setVenue] = useState('');
   const [fee, setFee] = useState('Free');
   const [description, setDescription] = useState('');
