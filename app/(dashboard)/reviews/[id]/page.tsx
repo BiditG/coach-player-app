@@ -1,11 +1,25 @@
 import { notFound } from 'next/navigation';
-import { CheckCircle2, Clock3 } from 'lucide-react';
 import { requireUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
-
-export default async function ReviewDetail({ params }: { params: Promise<{ id: string }> }) {
-  const profile = await requireUser(); const { id } = await params; const supabase = await createClient();
-  const { data: review } = await supabase.from('review_requests').select('*,videos(original_filename)').eq('id', id).eq('requester_id', profile.id).single();
-  if (!review) notFound(); const finished = review.status === 'COMPLETED'; const video = (review.videos as unknown as { original_filename: string }[] | null)?.[0];
-  return <><p className="eyebrow">Review request</p><h1 className="page-title mt-2">{video?.original_filename || 'Video review'}</h1><p className="page-copy">Professional review · {review.focus_area || 'General review'}</p>{!finished ? <div className="surface mt-8 p-7"><Clock3 className="size-5 text-neutral-400"/><h2 className="mt-5 section-title">{review.status.replace('_', ' ').toLowerCase().replace(/\b\w/g, (character: string) => character.toUpperCase())}</h2><p className="mt-2 text-[13px] leading-6 text-neutral-500">Your request is safely in the review flow. We&apos;ll notify you when there is an update.</p></div> : <div className="mt-8 grid gap-4 lg:grid-cols-[.42fr_.58fr]"><div className="surface p-7"><CheckCircle2 className="size-5 text-emerald-600"/><p className="eyebrow mt-7">Overall score</p><p className="mt-3 text-6xl font-semibold tracking-[-.07em]">{review.overall_score || '—'}</p><p className="mt-2 text-[12px] text-neutral-500">out of 10</p></div><div className="surface p-7"><p className="section-title">{review.summary || 'Your review is ready.'}</p><div className="mt-7 grid gap-5 sm:grid-cols-2"><div><p className="text-[12px] font-semibold">Strengths</p><ul className="mt-3 space-y-2 text-[12px] leading-5 text-neutral-500">{review.strengths?.map((item: string) => <li key={item}>• {item}</li>)}</ul></div><div><p className="text-[12px] font-semibold">To improve</p><ul className="mt-3 space-y-2 text-[12px] leading-5 text-neutral-500">{review.improvements?.map((item: string) => <li key={item}>• {item}</li>)}</ul></div></div></div></div>}</>;
+import { ReviewReport } from '@/components/review-report';
+import { ReviewAttachments } from '@/components/review-attachments';
+import { MedalAwardForm } from '@/components/medal-award-form';
+import { ProgressComparison } from '@/components/progress-comparison';
+import type { Review, RubricScore, TimestampFeedback, ReviewAnnotation, ReviewDrill, ProfessionalMedal, ReviewRating } from '@/lib/reviews/types';
+export default async function ReviewDetail({params}:{params:Promise<{id:string}>}){
+ const user=await requireUser();const {id}=await params;const db=await createClient();
+ const {data:raw}=await db.from('review_requests').select('*,videos(original_filename),professional_services(gig_title,display_name)').eq('id',id).single();if(!raw||(raw.requester_id!==user.id&&raw.professional_id!==user.id))notFound();
+ const review=raw as Review & {videos:{original_filename:string}|null;professional_services:{gig_title:string;display_name:string}|null};
+ if(review.status!=='COMPLETED')return <div><p className="eyebrow">Your cricket review</p><h1 className="page-title mt-2">{review.professional_services?.gig_title||'Professional review'}</h1><div className="surface mt-8 p-7"><p className="text-sm font-semibold">{review.status.replaceAll('_',' ')}</p><p className="mt-2 text-sm text-neutral-500">Your coach is preparing the performance report. Return here when it is submitted.</p></div><div className="mt-5"><ReviewAttachments reviewId={review.id} mode={review.professional_id===user.id?'coach':'player'}/></div></div>;
+ const [feedback,scores,annotations,drills,medal,rating,conversation]=await Promise.all([
+  db.from('review_timestamp_feedback').select('*').eq('review_request_id',id).order('timestamp_seconds'),
+  db.from('review_rubric_scores').select('*').eq('review_id',id).order('sort_order'),
+  db.from('review_annotations').select('*').eq('review_id',id),
+  db.from('review_drills').select('*').eq('review_id',id).order('sort_order'),
+  db.from('professional_review_medals').select('*').eq('review_id',id).maybeSingle(),
+  db.from('review_ratings').select('*').eq('review_id',id).maybeSingle(),
+  review.order_id?db.from('conversations').select('id').eq('order_id',review.order_id).maybeSingle():Promise.resolve({data:null}),
+ ]);
+ const {data:parent}=review.parent_review_id?await db.from('review_requests').select('id,video_id,review_rubric_scores(*)').eq('id',review.parent_review_id).eq('status','COMPLETED').single():{data:null};
+ return <>{review.professional_id===user.id&&!medal.data&&<MedalAwardForm reviewId={review.id}/>}<ReviewReport isCoach={review.professional_id===user.id} review={review} filename={review.videos?.original_filename||'Player video'} videoUrl={`/api/videos/${review.video_id}`} coachName={review.professional_services?.display_name||'Your coach'} playerName={review.requester_id===user.id?user.full_name||'Your performance':'Player'} serviceName={review.professional_services?.gig_title||'Professional cricket review'} feedback={(feedback.data||[]) as TimestampFeedback[]} scores={(scores.data||[]) as RubricScore[]} annotations={(annotations.data||[]) as ReviewAnnotation[]} drills={(drills.data||[]) as ReviewDrill[]} medal={medal.data as ProfessionalMedal|null} rating={rating.data as ReviewRating|null} conversationId={conversation.data?.id||null}/>{parent&&<ProgressComparison parentId={parent.id} parentVideoId={parent.video_id} currentVideoId={review.video_id} previous={(parent.review_rubric_scores||[]) as RubricScore[]} current={(scores.data||[]) as RubricScore[]}/>}</>;
 }
