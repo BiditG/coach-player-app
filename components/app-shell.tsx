@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Bell,
+  ClipboardCheck,
   Calendar,
   Flame,
   LogOut,
@@ -22,7 +23,7 @@ import { PostCreatorModal } from './post-creator';
 import { ShareModal } from './share-modal';
 import { Post } from '@/lib/post-store';
 
-export function AppShell({ profile, children }: { profile: Profile; children: React.ReactNode }) {
+export function AppShell({ profile, children, pendingReviewCount = 0 }: { profile: Profile; children: React.ReactNode; pendingReviewCount?: number }) {
   const pathname = usePathname();
   const [isPostCreatorOpen, setIsPostCreatorOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -34,6 +35,13 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
     { href: '/ai-review', label: 'AI Review', icon: Sparkles },
     { href: '/profile', label: 'Profile', icon: User },
   ];
+
+  if (profile.role === 'PROFESSIONAL') {
+    navLinks.splice(1, 0, { href: '/professional', label: 'Coach hub', icon: ClipboardCheck });
+    navLinks.splice(2, 0, { href: '/professional/reviews', label: 'Review queue', icon: ClipboardCheck });
+  } else {
+    navLinks.splice(1, 0, { href: '/reviews', label: 'My reviews', icon: ClipboardCheck });
+  }
 
   if (profile.role === 'ADMIN') {
     navLinks.unshift({ href: '/admin', label: 'Admin', icon: Shield });
@@ -48,9 +56,9 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
   };
 
   return (
-    <div className="min-h-screen w-full bg-white flex flex-col md:flex-row overflow-x-hidden">
+    <div className="app-canvas min-h-screen w-full flex flex-col md:flex-row overflow-x-hidden">
       {/* DESKTOP SIDEBAR (Full Height) */}
-      <aside className="hidden w-[230px] shrink-0 border-r border-black/[0.06] p-5 md:flex md:flex-col justify-between bg-white min-h-screen sticky top-0 h-screen">
+      <aside className="app-sidebar hidden w-[230px] shrink-0 p-5 md:flex md:flex-col justify-between min-h-screen sticky top-0 h-screen">
         <div>
           {/* Logo */}
           <Link href="/feed" aria-label="SprintNP Home" className="flex items-center gap-3 px-2 py-1">
@@ -73,8 +81,8 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
                   href={href}
                   className={`flex items-center gap-3.5 rounded-2xl px-3.5 py-3 text-xs font-semibold transition duration-200 ${
                     isActive
-                      ? 'bg-black text-white shadow-md'
-                      : 'text-neutral-500 hover:bg-neutral-100 hover:text-black'
+                      ? 'bg-neutral-900 text-white shadow-[0_8px_20px_rgba(0,0,0,.16)]'
+                      : 'text-neutral-500 hover:bg-white/75 hover:text-black'
                   }`}
                 >
                   <Icon size={18} strokeWidth={2} />
@@ -90,7 +98,7 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
             
             <button
               onClick={() => setIsPostCreatorOpen(true)}
-              className="w-full flex items-center gap-3 rounded-2xl bg-neutral-900 px-3.5 py-3 text-xs font-semibold text-white shadow-md hover:bg-neutral-800 transition"
+              className="w-full flex items-center gap-3 rounded-2xl bg-neutral-900 px-3.5 py-3 text-xs font-semibold text-white shadow-[0_8px_20px_rgba(0,0,0,.14)] transition active:scale-[.98] hover:bg-neutral-800"
             >
               <Plus size={18} strokeWidth={2.5} className="text-amber-400" />
               <span>Create Post</span>
@@ -99,7 +107,7 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
             <button
               onClick={() => setIsShareModalOpen(true)}
               aria-label="Share App"
-              className="w-full mt-2 flex items-center gap-3 rounded-2xl border border-black/[0.08] bg-white px-3.5 py-2.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-100 transition"
+              className="w-full mt-2 flex items-center gap-3 rounded-2xl border border-black/[0.08] bg-white/70 px-3.5 py-2.5 text-xs font-semibold text-neutral-700 transition active:scale-[.98] hover:bg-white"
             >
               <Share2 size={16} className="text-neutral-500" />
               <span>Share App</span>
@@ -128,16 +136,16 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
       </aside>
 
       {/* MAIN CONTENT AREA (Full Width & Height) */}
-      <main className="min-w-0 flex-1 flex flex-col bg-white min-h-screen">
+      <main className="min-w-0 flex-1 flex flex-col min-h-screen">
         {/* HEADER */}
-        <header className="flex h-16 items-center justify-between border-b border-black/[.055] px-5 sm:px-8 bg-white/80 backdrop-blur-md sticky top-0 z-20 w-full">
+        <header className="app-toolbar flex h-16 items-center justify-between px-5 sm:px-8 sticky top-0 z-20 w-full">
           <Link href="/feed" className="flex items-center gap-2 md:hidden">
             <div className="grid size-8 place-items-center rounded-xl bg-black text-xs font-bold text-white">S</div>
             <span className="text-sm font-extrabold tracking-tight">SprintNP</span>
           </Link>
 
           {/* Search Bar */}
-          <div className="hidden w-full max-w-md items-center gap-2.5 rounded-full bg-neutral-100 px-4 py-2 md:flex border border-black/[0.04] focus-within:bg-white focus-within:border-black/20 transition">
+          <div className="hidden w-full max-w-md items-center gap-2.5 rounded-full bg-black/[.045] px-4 py-2 md:flex border border-white/60 focus-within:bg-white focus-within:border-black/15 focus-within:shadow-[0_3px_14px_rgba(0,0,0,.06)] transition">
             <Search size={15} className="text-neutral-400" />
             <input
               type="text"
@@ -150,15 +158,16 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
           <div className="ml-auto flex items-center gap-3">
             <button
               onClick={() => setIsPostCreatorOpen(true)}
-              className="rounded-full bg-black px-4 py-2 text-xs font-semibold text-white shadow-md hover:bg-neutral-800 transition flex items-center gap-1.5"
+              className="rounded-full bg-black px-4 py-2 text-xs font-semibold text-white shadow-[0_6px_16px_rgba(0,0,0,.17)] transition active:scale-[.97] hover:bg-neutral-800 flex items-center gap-1.5"
             >
               <Plus size={15} className="text-amber-400" />
               <span className="hidden sm:inline">Create Post</span>
             </button>
 
-            <button className="grid size-9 place-items-center rounded-full text-neutral-500 hover:bg-neutral-100 transition" aria-label="Notifications">
+            <Link href="/notifications" className="relative grid size-9 place-items-center rounded-full text-neutral-500 transition active:scale-[.94] hover:bg-white/80" aria-label={`Notifications${pendingReviewCount ? `, ${pendingReviewCount} pending reviews` : ''}`}>
               <Bell size={18} strokeWidth={1.7} />
-            </button>
+              {pendingReviewCount > 0 && <span className="absolute -right-1 -top-1 grid min-w-4 place-items-center rounded-full bg-red-500 px-1 text-[9px] font-bold leading-4 text-white">{pendingReviewCount > 99 ? '99+' : pendingReviewCount}</span>}
+            </Link>
 
             <Link href="/profile" className="grid size-8 place-items-center rounded-full bg-neutral-900 text-xs font-bold text-white shadow-sm" aria-label="Profile">
               {initial}
@@ -173,7 +182,7 @@ export function AppShell({ profile, children }: { profile: Profile; children: Re
       </main>
 
       {/* MOBILE NAVIGATION BAR */}
-      <nav className="fixed inset-x-3 bottom-3 z-30 flex justify-around rounded-2xl border border-black/[.08] bg-white/95 px-2 py-2.5 shadow-xl backdrop-blur-lg md:hidden">
+      <nav className="fixed inset-x-3 bottom-3 z-30 flex justify-around rounded-2xl border border-white/70 bg-white/75 px-2 py-2.5 shadow-[0_12px_32px_rgba(0,0,0,.14)] backdrop-blur-xl md:hidden">
         {navLinks.map(({ href, label, icon: Icon }) => {
           const isActive = pathname === href;
           return (

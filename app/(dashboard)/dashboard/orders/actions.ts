@@ -18,6 +18,9 @@ export async function beginCheckout(formData: FormData) {
 
 export async function confirmPayment(formData: FormData) {
   const user = await requireUser(); const orderId = String(formData.get('order_id') || ''); const videoId = String(formData.get('video_id') || ''); const supabase = await createClient();
+  let media: { storageKey: string; mimeType: string; kind: 'IMAGE' | 'VIDEO' }[] = [];
+  try { media = JSON.parse(String(formData.get('media') || '[]')); } catch { throw new Error('Invalid supporting media.'); }
+  if (!Array.isArray(media) || media.length > 7 || media.filter(item => item.kind === 'IMAGE').length > 5 || media.filter(item => item.kind === 'VIDEO').length > 2 || media.some(item => !item || !['IMAGE', 'VIDEO'].includes(item.kind) || typeof item.storageKey !== 'string' || !item.storageKey.startsWith(`${orderId}/player/`) || typeof item.mimeType !== 'string')) throw new Error('Invalid supporting media.');
   const { data: order } = await supabase.from('orders').select('id,professional_id,service_id,status').eq('id', orderId).eq('buyer_id', user.id).single();
   if (!order || order.status !== 'DRAFT') throw new Error('This payment session is unavailable.');
   const { data: video } = await supabase.from('videos').select('id').eq('id', videoId).eq('user_id', user.id).eq('status', 'READY').is('deleted_at', null).single();
@@ -25,5 +28,9 @@ export async function confirmPayment(formData: FormData) {
   const { error: orderError } = await supabase.from('orders').update({ status: 'PENDING', review_video_id: video.id }).eq('id', order.id).eq('buyer_id', user.id).eq('status', 'DRAFT'); if (orderError) throw new Error(orderError.message);
   const { data: review, error: reviewError } = await supabase.from('review_requests').select('id').eq('order_id', order.id).single();
   if (reviewError || !review) throw new Error('Review creation failed. Please contact support with your order number.');
+  if (media.length) {
+    const { error: attachmentError } = await supabase.from('review_attachments').insert(media.map(item => ({ review_id: review.id, uploaded_by: user.id, kind: item.kind, storage_key: item.storageKey, mime_type: item.mimeType, duration_seconds: null })));
+    if (attachmentError) throw new Error(attachmentError.message);
+  }
   redirect(`/reviews/${review.id}`);
 }

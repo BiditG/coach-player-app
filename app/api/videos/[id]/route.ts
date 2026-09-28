@@ -5,15 +5,17 @@ import { Readable } from 'node:stream';
 import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
+import { signR2Read } from '@/lib/r2';
+import { createAdminClient } from '@/lib/supabase/admin';
 export async function GET(request:Request,{params}:{params:Promise<{id:string}>}){
- const user=await getCurrentUser();if(!user)return new Response(null,{status:401});const {id}=await params;const db=await createClient();
- const {data:video}=await db.from('videos').select('id,user_id,storage_key,mime_type,is_public').eq('id',id).single();
+ const user=await getCurrentUser();if(!user)return new Response(null,{status:401});const {id}=await params;const db=await createClient(); const admin=createAdminClient();
+ const {data:video}=await admin.from('videos').select('id,user_id,storage_key,mime_type,is_public').eq('id',id).maybeSingle();
  if(!video)return new Response(null,{status:404});
- const {data:viewer}=await db.from('profiles').select('role').eq('id',user.id).single();
+ const {data:viewer}=await admin.from('profiles').select('role').eq('id',user.id).maybeSingle();
  if(!video.is_public&&video.user_id!==user.id&&viewer?.role!=='ADMIN'){
   const [{data:review},{data:analysis}]=await Promise.all([
-   db.from('review_requests').select('id').eq('video_id',id).eq('professional_id',user.id).limit(1).maybeSingle(),
-   db.from('analysis_orders').select('id').eq('video_id',id).eq('professional_id',user.id).limit(1).maybeSingle(),
+   admin.from('review_requests').select('id').eq('video_id',id).eq('professional_id',user.id).limit(1).maybeSingle(),
+   admin.from('analysis_orders').select('id').eq('video_id',id).eq('professional_id',user.id).limit(1).maybeSingle(),
   ]);
   if(!review&&!analysis)return new Response(null,{status:404});
  }
@@ -23,6 +25,7 @@ export async function GET(request:Request,{params}:{params:Promise<{id:string}>}
   if(error||!data?.signedUrl)return new Response(null,{status:404});
   return NextResponse.redirect(data.signedUrl,{headers:{'Cache-Control':'private, no-store'}});
  }
+ if(video.storage_key.startsWith('r2:')) return NextResponse.redirect(await signR2Read(video.storage_key.slice(3)),{headers:{'Cache-Control':'private, no-store'}});
  const key=path.basename(video.storage_key);if(key!==video.storage_key)return new Response(null,{status:404});
  let file=path.join(process.cwd(),'private','uploads',key);
  let info;try{info=await stat(file)}catch{file=path.join(process.cwd(),'public','uploads',key);try{info=await stat(file)}catch{return NextResponse.json({error:'Media unavailable.'},{status:404})}}

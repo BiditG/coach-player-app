@@ -155,13 +155,24 @@
 }
 
 @layer components {
-  .surface { @apply rounded-2xl border border-black/[.055] bg-white shadow-[0_1px_3px_rgba(0,0,0,.025)]; }
+  .app-canvas { background: radial-gradient(circle at 85% -10%, rgba(255,255,255,.95), transparent 35%), linear-gradient(145deg, #f4f4f6 0%, #fbfbfc 52%, #f0f1f3 100%); }
+  .app-sidebar { background: rgba(255,255,255,.68); border-right: 1px solid rgba(255,255,255,.72); backdrop-filter: blur(24px) saturate(160%); }
+  .app-toolbar { background: rgba(255,255,255,.62); border-bottom: 1px solid rgba(255,255,255,.76); backdrop-filter: blur(22px) saturate(175%); }
+  .surface { @apply rounded-2xl border border-black/[.055] bg-white shadow-[0_8px_30px_rgba(0,0,0,.035)]; }
   .page-title { @apply text-[32px] font-semibold tracking-[-0.055em] text-[#1d1d1f] sm:text-[38px]; }
   .eyebrow { @apply text-[10px] font-semibold uppercase tracking-[.14em] text-neutral-400; }
   .page-copy { @apply mt-2 max-w-xl text-[14px] leading-6 text-neutral-500; }
   .section-title { @apply text-[19px] font-semibold tracking-[-.035em] text-[#1d1d1f]; }
-  .primary-button { @apply inline-flex items-center justify-center rounded-full bg-[#171719] px-4 py-2.5 text-[13px] font-medium text-white transition duration-200 hover:scale-[1.015] hover:bg-black; }
-  .quiet-button { @apply inline-flex items-center justify-center rounded-full border border-black/[.08] bg-white px-4 py-2.5 text-[13px] font-medium text-[#1d1d1f] transition duration-200 hover:bg-neutral-50; }
+  .primary-button { @apply inline-flex items-center justify-center rounded-full bg-[#171719] px-4 py-2.5 text-[13px] font-medium text-white shadow-[0_7px_18px_rgba(0,0,0,.14)] transition duration-200 hover:scale-[1.015] hover:bg-black active:scale-[.97]; }
+  .quiet-button { @apply inline-flex items-center justify-center rounded-full border border-black/[.08] bg-white/80 px-4 py-2.5 text-[13px] font-medium text-[#1d1d1f] transition duration-200 hover:bg-white hover:shadow-[0_4px_14px_rgba(0,0,0,.055)] active:scale-[.97]; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .app-sidebar, .app-toolbar { background: rgba(255,255,255,.96); backdrop-filter: none; }
 }
 
 @layer base {

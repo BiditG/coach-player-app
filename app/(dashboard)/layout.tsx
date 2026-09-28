@@ -3,7 +3,13 @@ import { AppShell } from '@/components/app-shell';
 import { requireUser } from '@/lib/auth';
 
 async function AuthenticatedShell({ children }: { children: React.ReactNode }) {
-  return <AppShell profile={await requireUser()}>{children}</AppShell>;
+  const profile = await requireUser();
+  const { createClient } = await import('@/lib/supabase/server');
+  const db = await createClient();
+  const { count } = profile.role === 'PROFESSIONAL'
+    ? await db.from('review_requests').select('*', { count: 'exact', head: true }).eq('professional_id', profile.id).eq('status', 'REQUESTED')
+    : { count: 0 };
+  return <AppShell profile={profile} pendingReviewCount={count || 0}>{children}</AppShell>;
 }
 
 export default function Layout({ children }: { children: React.ReactNode }) {
