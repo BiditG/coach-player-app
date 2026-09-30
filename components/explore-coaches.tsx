@@ -1,0 +1,36 @@
+'use client';
+
+import Image from 'next/image';
+import Link from 'next/link';
+import { ArrowRight, CheckCircle2, Clock3, Search, SlidersHorizontal, Star, X } from 'lucide-react';
+import { useMemo, useState } from 'react';
+
+type Offer = { id: string; display_name: string; gig_title: string; headline: string; specialties: string[] | null; turnaround_days: number; years_experience: number; banner_url: string | null; coach: { rating: number | null; reviews_completed: number | null } | null };
+
+export function ExploreCoaches({ offers }: { offers: Offer[] }) {
+  const [query, setQuery] = useState('');
+  const [specialty, setSpecialty] = useState('All skills');
+  const [speed, setSpeed] = useState('Any turnaround');
+  const [rating, setRating] = useState('Any rating');
+  const specialties = useMemo(() => ['All skills', ...Array.from(new Set(offers.flatMap(offer => offer.specialties || []))).sort()], [offers]);
+  const matches = useMemo(() => offers.filter(offer => {
+    const haystack = [offer.display_name, offer.gig_title, offer.headline, ...(offer.specialties || [])].join(' ').toLowerCase();
+    const matchesQuery = haystack.includes(query.trim().toLowerCase());
+    const matchesSpecialty = specialty === 'All skills' || offer.specialties?.includes(specialty);
+    const matchesSpeed = speed === 'Any turnaround' || (speed === 'Within 2 days' ? offer.turnaround_days <= 2 : offer.turnaround_days <= 5);
+    const matchesRating = rating === 'Any rating' || Number(offer.coach?.rating || 0) >= Number(rating);
+    return matchesQuery && matchesSpecialty && matchesSpeed && matchesRating;
+  }), [offers, query, specialty, speed, rating]);
+  const hasFilters = query || specialty !== 'All skills' || speed !== 'Any turnaround' || rating !== 'Any rating';
+  const clear = () => { setQuery(''); setSpecialty('All skills'); setSpeed('Any turnaround'); setRating('Any rating'); };
+
+  return <div className="mx-auto max-w-6xl pb-20">
+    <header className="max-w-2xl"><p className="eyebrow">Explore coaches</p><h1 className="page-title mt-2">Find the right perspective.</h1><p className="page-copy">Video feedback from cricket coaches, matched to the part of your game you want to improve.</p></header>
+
+    <section className="mt-8 overflow-hidden rounded-[30px] border border-white/80 bg-white/75 p-4 shadow-[0_18px_50px_rgba(0,0,0,.06)] backdrop-blur-xl sm:p-5"><div className="relative"><Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-neutral-400"/><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search coaches, skills or reviews" className="h-12 w-full rounded-2xl border border-black/[.08] bg-[#f7f7f8] pl-11 pr-4 text-sm outline-none transition focus:border-neutral-400 focus:bg-white" /></div><div className="mt-3 flex flex-wrap items-center gap-2"><span className="inline-flex items-center gap-1.5 px-2 text-xs font-medium text-neutral-500"><SlidersHorizontal className="size-3.5" />Filter</span><select aria-label="Skill filter" value={specialty} onChange={event => setSpecialty(event.target.value)} className="rounded-full border border-black/[.08] bg-white px-3 py-2 text-xs font-medium text-neutral-700 outline-none"><option>All skills</option>{specialties.slice(1).map(item => <option key={item}>{item}</option>)}</select><select aria-label="Turnaround filter" value={speed} onChange={event => setSpeed(event.target.value)} className="rounded-full border border-black/[.08] bg-white px-3 py-2 text-xs font-medium text-neutral-700 outline-none"><option>Any turnaround</option><option>Within 2 days</option><option>Within 5 days</option></select><select aria-label="Rating filter" value={rating} onChange={event => setRating(event.target.value)} className="rounded-full border border-black/[.08] bg-white px-3 py-2 text-xs font-medium text-neutral-700 outline-none"><option>Any rating</option><option value="4.5">4.5+ rating</option><option value="4">4.0+ rating</option></select>{hasFilters && <button type="button" onClick={clear} className="inline-flex items-center gap-1 rounded-full px-3 py-2 text-xs font-medium text-neutral-500 transition hover:bg-neutral-100"><X className="size-3.5" />Clear</button>}</div></section>
+
+    <div className="mt-7 flex items-center justify-between"><div><p className="eyebrow">Available now</p><h2 className="section-title mt-2">{matches.length} coach{matches.length === 1 ? '' : 'es'} to explore</h2></div><p className="hidden text-xs text-neutral-500 sm:block">Ranked by player ratings and completed reviews</p></div>
+
+    {matches.length ? <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{matches.map(offer => <Link key={offer.id} href={`/explore/${offer.id}`} className="group overflow-hidden rounded-[26px] border border-black/[.07] bg-white/85 shadow-[0_10px_28px_rgba(0,0,0,.04)] transition hover:-translate-y-1 hover:bg-white hover:shadow-[0_18px_40px_rgba(0,0,0,.09)] active:scale-[.99] motion-reduce:transform-none"><div className="relative aspect-[1.85/1] overflow-hidden bg-[#e8eee7]">{offer.banner_url ? <Image src={offer.banner_url} alt="Coach offer banner" fill className="object-cover transition duration-500 group-hover:scale-[1.04] motion-reduce:transition-none" /> : <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,#faf6ea,transparent_45%),linear-gradient(135deg,#dce8df,#f3eee4)]"/>}<span className="absolute left-4 top-4 inline-flex items-center gap-1 rounded-full bg-black/55 px-2.5 py-1.5 text-[11px] font-semibold text-white backdrop-blur-md"><Star className="size-3 fill-amber-300 text-amber-300" />{offer.coach?.rating || 'New'}</span></div><div className="p-5"><div className="flex items-center gap-2 text-xs text-neutral-500"><span className="grid size-7 place-items-center rounded-full bg-neutral-900 text-[10px] font-semibold text-white">{offer.display_name?.[0] || 'C'}</span><span className="truncate">{offer.display_name}</span><CheckCircle2 className="size-3.5 shrink-0 text-neutral-400" /></div><h3 className="mt-4 text-[18px] font-semibold leading-6 tracking-[-.035em]">{offer.gig_title}</h3><p className="mt-2 line-clamp-2 min-h-10 text-xs leading-5 text-neutral-500">{offer.headline || 'Personal video feedback for your cricket development.'}</p><div className="mt-5 flex flex-wrap gap-1.5">{(offer.specialties || []).slice(0, 3).map(item => <span key={item} className="rounded-full bg-neutral-100 px-2.5 py-1 text-[10px] font-medium text-neutral-600">{item}</span>)}</div><div className="mt-5 flex items-center justify-between border-t border-black/[.06] pt-4 text-xs"><span className="flex items-center gap-1.5 text-neutral-500"><Clock3 className="size-3.5" />{offer.turnaround_days} day{offer.turnaround_days === 1 ? '' : 's'}</span><span className="font-semibold text-neutral-900">View offer <ArrowRight className="ml-1 inline size-3.5 transition group-hover:translate-x-0.5" /></span></div></div></Link>)}</div> : <div className="mt-5 rounded-[26px] border border-dashed border-black/[.12] bg-white/55 p-12 text-center"><p className="text-sm font-semibold">No coaches match these filters</p><p className="mt-2 text-xs text-neutral-500">Try a broader skill, turnaround or rating selection.</p><button type="button" onClick={clear} className="quiet-button mt-5">Clear filters</button></div>}
+  </div>;
+}

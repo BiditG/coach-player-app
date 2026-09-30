@@ -1,15 +1,6 @@
 'use server';
 import { redirect } from 'next/navigation';
+import { z } from 'zod';
 import { requireUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
-
-export async function sendReviewRequest(formData: FormData) {
-  const profile = await requireUser(); const supabase = await createClient();
-  if (profile.role === 'PROFESSIONAL') throw new Error('Professional accounts cannot submit review requests. Switch to a player account to request feedback.');
-  const professionalId = String(formData.get('professional_id')); const gigId = String(formData.get('gig_id')); const videoId = String(formData.get('video_id'));
-  const focus = String(formData.get('focus_area') || ''); const notes = String(formData.get('notes') || '');
-  if (!professionalId || !gigId || !videoId) throw new Error('Choose a gig and video before sending your request.');
-  const { error } = await supabase.from('review_requests').insert({ requester_id: profile.id, professional_id: professionalId, gig_id: gigId, video_id: videoId, focus_area: focus || null, notes: notes || null });
-  if (error) throw new Error('Unable to send this review request.');
-  redirect('/reviews');
-}
+export async function sendReviewRequest(formData:FormData){const player=await requireUser();if(player.role==='PROFESSIONAL')throw new Error('Use a player account to request feedback.');const data=z.object({professionalId:z.uuid(),gigId:z.uuid(),videoId:z.uuid(),focus:z.string().max(200),notes:z.string().max(4000)}).parse({professionalId:formData.get('professional_id'),gigId:formData.get('gig_id'),videoId:formData.get('video_id'),focus:String(formData.get('focus_area')||''),notes:String(formData.get('notes')||'')});const db=await createClient();const [{data:gig},{data:video},{data:packages}]=await Promise.all([db.from('professional_services').select('id,professional_id').eq('id',data.gigId).eq('professional_id',data.professionalId).eq('is_published',true).single(),db.from('videos').select('id').eq('id',data.videoId).eq('user_id',player.id).eq('status','READY').is('deleted_at',null).single(),db.from('service_packages').select('id,price_cents,delivery_days').eq('service_id',data.gigId).eq('is_active',true).order('price_cents').limit(1)]);if(!gig||!video||!packages?.[0]||gig.professional_id===player.id)throw new Error('Choose an available gig and your own ready video.');const option=packages[0];const {data:order,error}=await db.from('orders').insert({buyer_id:player.id,professional_id:gig.professional_id,service_id:gig.id,package_id:option.id,status:'DRAFT',requirements:[data.focus,data.notes].filter(Boolean).join('\n')||null,subtotal_cents:option.price_cents,total_cents:option.price_cents,delivery_due_at:new Date(Date.now()+option.delivery_days*86400000).toISOString()}).select('id').single();if(error||!order)throw new Error(error?.message||'Unable to create review checkout.');redirect(`/checkout/${order.id}?video=${video.id}`)}
